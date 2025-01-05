@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mark Attendance</title>
+</head>
+
+<body>
+  <h1>Mark Attendance for the {{ class_data.class_name }} class</h1>
+  <form action="/mark_attendance/{{ class_data.class_id }}" method="POST">
+    {% for data in attendance %} {{ data.status }}
+    <label for="student_{{ data.student_id }}">{{ data.full_name }}:</label><br />
+    <select id="student_{{ data.student_id }}" name="student_{{ data.student_id }}">
+      <option value="Absent" {% if data.status=""="Absent" %} selected="selected" {% endif %}>
+        Absent
+      </option>
+      <option value="Present" {% if data.status=""="Present" %} selected="selected" {% endif %}>
+        Present
+      </option>
+      <option value="Late" {% if data.status=""="Late" %} selected="selected" {% endif %}>
+        Late
+      </option>
+    </select><br />
+    <input type="checkbox" id="paid_{{ data.student_id }}" name="paid_{{ data.student_id }}" {% if data.paid %} checked
+      {% endif %} />
+    <label for="paid_{{ data.student_id }}">paid</label><br />
+    <label for="notes_{{ data.student_id }}">Notes:</label><br />
+    <input type="text" id="notes_{{ data.student_id }}" name="notes_{{ data.student_id }}"
+      value="{{ data.notes }}" /><br /><br />
+    {% endfor %}
+
+    <button type="submit">Submit Attendance</button>
+  </form>
+</body>
+
+</html>

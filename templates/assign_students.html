@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Class</title>
+</head>
+
+<body>
+  <h1>Assign Students to Class</h1>
+  <form action="/assign_students" method="POST">
+    <label for="class_id">Select Class:</label><br />
+    <select id="class_id" name="class_id" required>
+      {% for class_item in classes %}
+      <option value="{{ class_item.class_id }}">
+        {{ class_item.class_name }}
+      </option>
+      {% endfor %}
+    </select><br /><br />
+
+    <label for="student_ids">Select Students:</label><br />
+    {% for student in students %}
+    <input type="checkbox" id="student_{{ student.student_id }}" name="student_ids" value="{{ student.student_id }}" />
+    <label for="student_{{ student.student_id }}">{{ student.full_name }}</label><br />
+    {% endfor %}
+    <br />
+    <button type="submit">Assign Students</button>
+  </form>
+</body>
+
+</html>

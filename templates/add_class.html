@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Class</title>
+</head>
+
+<body>
+  <h1>Add New Class</h1>
+  <form action="/add_class" method="POST">
+    <!-- Class Name -->
+    <label for="class_name">Class Name:</label><br />
+    <input type="text" id="class_name" name="class_name" required /><br /><br />
+
+    <!-- Teachers -->
+    <label for="teacher_ids">Select Teachers:</label><br />
+    {% for teacher in teachers %}
+    <input type="checkbox" id="teacher_{{ teacher.teacher_id }}" name="teacher_ids" value="{{ teacher.teacher_id }}" />
+    <label for="teacher_{{ teacher.teacher_id }}">{{ teacher.teacher_name }}</label><br />
+    {% endfor %}
+    <br />
+
+    <label for="package_id">Select package:</label><br />
+    {% for package in packages %}
+    <input type="radio" id="package_{{ package.package_id }}" name="package_id" value="{{ package.package_id }}" />
+    <label for="package_{{ package.package_id }}">{{ package.package_name }}</label><br />
+    {% endfor %}
+    <br />
+
+    <label for="day_of_week">Select Day of the Week:</label><br />
+    <select id="day_of_week" name="day_of_week" required>
+      <option value="Monday">Monday</option>
+      <option value="Tuesday">Tuesday</option>
+      <option value="Wednesday">Wednesday</option>
+      <option value="Thursday">Thursday</option>
+      <option value="Friday">Friday</option>
+      <option value="Saturday">Saturday</option>
+      <option value="Sunday">Sunday</option>
+    </select><br /><br />
+
+    <label for="time_of_day">Select Time of Day:</label><br />
+    <input type="time" id="time_of_day" name="time_of_day" required /><br /><br />
+    <!-- Submit Button -->
+    <button type="submit">Add Class</button>
+  </form>
+</body>
+
+</html>

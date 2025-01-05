@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title></title>
+  <link href="css/style.css" rel="stylesheet" />
+</head>
+
+<body>
+  <a href="/add_package">add package</a> <br />
+  <a href="/add_class">add class</a> <br />
+  <a href="/add_student">add student</a> <br />
+  <a href="/add_teacher">add teacher</a> <br />
+  <a href="/assign_students">assign students</a> <br />
+  {% for class in classes %}
+  <a href="/mark_attendance/{{ class.class_id }}">mark {{ class.class_name }} attendance</a><br />
+  <a href="/view_attendance/{{ class.class_id }}">view {{ class.class_name }} attendance</a><br />
+  <a href="/view_payments/{{ class.class_id }}">view {{ class.class_name }} payments</a><br />
+  {% endfor %}
+</body>
+
+</html>
