@@ -115,9 +115,33 @@ def assign_students():
     return redirect(url_for("index"))  # Redirect after adding the class
 
 
+@app.route("/ajax_server/", methods=["POST", "GET"])
+def ajax_server():
+    if request.method == "GET":
+        attendance_date = datetime.now() + timedelta(days=7 * 1)
+        class_id = request.args.get("class_id")
+        student_id = request.args.get("student_id")
+        field = request.args.get("field")
+        value = request.args.get("value")
+        print(attendance_date, class_id, student_id, field, value)
+        model.update_attendance_field(
+            class_id, student_id, field, value, attendance_date
+        )
+
+        return "hello"
+
+
+@app.route("/ajax_poll", methods=["POST", "GET"])
+def ajax_poll():
+    if request.method == "GET":
+        attendance_date = datetime.now() + timedelta(days=7 * 1)
+        class_id = request.args.get("class_id")
+        return model.get_attendance(class_id, attendance_date)
+
+
 @app.route("/mark_attendance/<int:class_id>", methods=["GET", "POST"])
 def mark_attendance(class_id):
-    attendance_date = datetime.now() + timedelta(days=7 * 10)
+    attendance_date = datetime.now() + timedelta(days=7 * 1)
     print(attendance_date)
     class_data = model.get_class(class_id)
     if attendance_date.strftime("%A") != class_data["day_of_week"]:

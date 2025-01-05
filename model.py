@@ -304,6 +304,58 @@ class Model:
         self.__conn.commit()
         dbcursor.close()
 
+    def update_attendance_field(
+        self, class_id, student_id, field, value, attendance_date
+    ):
+        """
+        attendance_records: List of dictionaries in the format:
+        [{'student_id': 1, 'status': 'Present', 'notes': 'On time'}, ...]
+        """
+
+        dbcursor = self.__conn.cursor(dictionary=True)
+        if field == "paid":
+            value = True if value == "1" else False
+            print("paying", value)
+            payment_month = datetime(
+                attendance_date.year, attendance_date.month, 1
+            ).strftime("%Y-%m-%d")
+
+            dbcursor.execute(
+                "SELECT package_id FROM package_classes WHERE class_id = %s",
+                (class_id,),
+            )
+            package_id = dbcursor.fetchone()["package_id"]
+            dbcursor.execute(
+                "UPDATE student_monthly_package_payments SET paid = %s WHERE student_id = %s AND package_id = %s AND payment_month = %s",
+                (value, student_id, package_id, payment_month),
+            )
+        else:
+            print("attending")
+            # Get the `student_class_id` for the student and class
+            dbcursor.execute(
+                "SELECT student_class_id FROM student_classes WHERE student_id = %s AND class_id = %s",
+                (student_id, class_id),
+            )
+
+            student_class_id = dbcursor.fetchone()["student_class_id"]
+            print(student_class_id)
+
+            # Update the attendance recordallowed_fields = ["notes", "status", "remarks"]  # Add valid column names here
+            if field not in ["notes", "status"]:
+                raise ValueError("Invalid column name")
+            query = f"UPDATE attendance SET {field} = %s WHERE student_class_id = %s AND attendance_date = %s"
+            dbcursor.execute(
+                query,
+                (
+                    value,
+                    student_class_id,
+                    attendance_date.strftime("%Y-%m-%d"),
+                ),
+            )
+
+        self.__conn.commit()
+        dbcursor.close()
+
     def mark_attendance(self, class_id, attendance_date, attendance_records):
         """
         attendance_records: List of dictionaries in the format:
