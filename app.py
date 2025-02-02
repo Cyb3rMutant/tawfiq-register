@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 app = Flask(__name__)
 app.secret_key = "a1V#9R^l6vhGI'Xyms@]ARPJ"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
+server_last_update_time = datetime.now()
 
 
 @app.route("/")
@@ -27,7 +28,6 @@ def add_student():
     phone_number = request.form["phone_number"]
     classes = request.form.getlist("classes")
     special_requirements = request.form.get("special_requirements", "")
-    full_name.count()
 
     model.add_student(
         full_name, age, gender, phone_number, classes, special_requirements
@@ -117,8 +117,9 @@ def assign_students():
 
 @app.route("/ajax_server/", methods=["POST", "GET"])
 def ajax_server():
+    global server_last_update_time
     if request.method == "GET":
-        attendance_date = datetime.now() + timedelta(days=7 * 1)
+        attendance_date = datetime.now() + timedelta(days=7 * 0)
         class_id = request.args.get("class_id")
         student_id = request.args.get("student_id")
         field = request.args.get("field")
@@ -128,20 +129,27 @@ def ajax_server():
             class_id, student_id, field, value, attendance_date
         )
 
-        return "hello"
+        server_last_update_time = datetime.now()
+        return str(server_last_update_time)
 
 
 @app.route("/ajax_poll", methods=["POST", "GET"])
 def ajax_poll():
+    global server_last_update_time
     if request.method == "GET":
-        attendance_date = datetime.now() + timedelta(days=7 * 1)
+        client_last_update_time = datetime.strptime(
+            request.args.get("value"), "%d/%m/%Y %H:%M:%S"
+        )
+        if client_last_update_time > server_last_update_time:
+            return []
+        attendance_date = datetime.now() + timedelta(days=7 * 0)
         class_id = request.args.get("class_id")
         return model.get_attendance(class_id, attendance_date)
 
 
 @app.route("/mark_attendance/<int:class_id>", methods=["GET", "POST"])
 def mark_attendance(class_id):
-    attendance_date = datetime.now() + timedelta(days=7 * 1)
+    attendance_date = datetime.now()  # + timedelta(days=7 * 0)
     print(attendance_date)
     class_data = model.get_class(class_id)
     if attendance_date.strftime("%A") != class_data["day_of_week"]:

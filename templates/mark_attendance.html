@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mark Attendance</title>
   <script>
+    let lastUpdateTime = new Date(0, 0, 0);
+
     function updateAttendance(studentId, field, value) {
       var xmlhttp = new XMLHttpRequest();
       xmlhttp.onreadystatechange = function () {
@@ -72,15 +74,32 @@
             // const updates = JSON.parse(xmlhttp.responseText);
             const updates = JSON.parse(xmlhttp.responseText);
             console.log(updates, typeof updates);
-            applyUpdates(updates);
+            if (updates.length) {
+              lastUpdateTime = new Date();
+              applyUpdates(updates);
+            }
           } catch (e) {
             console.error("Error parsing server response:", e);
           }
         }
       };
+      var datetime =
+        lastUpdateTime.getDate() +
+        "/" +
+        (lastUpdateTime.getMonth() + 1) +
+        "/" +
+        lastUpdateTime.getFullYear() +
+        " " +
+        lastUpdateTime.getHours() +
+        ":" +
+        lastUpdateTime.getMinutes() +
+        ":" +
+        lastUpdateTime.getSeconds();
       xmlhttp.open(
         "GET",
-        "/ajax_poll?class_id={{ class_data.class_id }}",
+        `/ajax_poll?class_id={{ class_data.class_id }}&value=${encodeURIComponent(
+          datetime,
+        )}`,
         true,
       ); // Adjust endpoint as needed
       xmlhttp.send();
