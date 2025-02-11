@@ -13,6 +13,13 @@ class Model:
             database="register",
         )
 
+    def get_field_types(self):
+        dbcursor = self.__conn.cursor(dictionary=True)
+        dbcursor.execute("SELECT * FROM field_types")
+        data = dbcursor.fetchall()
+        dbcursor.close()
+        return data
+
     def get_students(self):
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute("SELECT * FROM students")

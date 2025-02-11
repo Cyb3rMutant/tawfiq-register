@@ -1,4 +1,13 @@
-from flask import Flask, request, render_template, send_file, url_for, redirect, session
+from flask import (
+    Flask,
+    json,
+    request,
+    render_template,
+    send_file,
+    url_for,
+    redirect,
+    session,
+)
 from model import model
 from datetime import datetime, date, timedelta
 
@@ -50,28 +59,42 @@ def add_teacher():
     return redirect(url_for("index"))  # Redirect after adding teacher
 
 
+@app.route("/sub")
+def sub():
+    fields = '[{"field_type_id":"2","defaul_values":"232,3132,3 12","field_name":"r23"},{"field_type_id":"1","defaul_values":"","field_name":"ru932"},{"field_type_id":"3","defaul_values":"324,42rf,vdsa","field_name":"432"}]'
+    fields = json.loads(fields)
+    print(fields)
+    return fields
+
+
 @app.route("/add_class", methods=["GET", "POST"])
 def add_class():
     if request.method != "POST":
         # For GET request: Retrieve available teachers for the form
+        field_types = model.get_field_types()
         teachers = model.get_teachers()
         packages = model.get_packages()
-        return render_template("add_class.html", teachers=teachers, packages=packages)
+        return render_template(
+            "add_class.html",
+            teachers=teachers,
+            packages=packages,
+            field_types=field_types,
+        )
 
-    class_name = request.form["class_name"]
-    teacher_ids = request.form.getlist("teacher_ids")  # Multiple teachers
-    package_id = request.form["package_id"]
-    day_of_week = request.form["day_of_week"]
-    time_of_day = request.form["time_of_day"]
+    # class_name = request.form["class_name"]
+    # teacher_ids = request.form.getlist("teacher_ids")  # Multiple teachers
+    # package_id = request.form["package_id"]
+    # day_of_week = request.form["day_of_week"]
+    # time_of_day = request.form["time_of_day"]
 
-    # Call the function to add a class
-    model.add_class(
-        class_name=class_name,
-        teacher_ids=teacher_ids,
-        package_id=package_id,
-        day_of_week=day_of_week,
-        time_of_day=time_of_day,
-    )
+    # # Call the function to add a class
+    # model.add_class(
+    #     class_name=class_name,
+    #     teacher_ids=teacher_ids,
+    #     package_id=package_id,
+    #     day_of_week=day_of_week,
+    #     time_of_day=time_of_day,
+    # )
 
     return redirect(url_for("index"))  # Redirect after adding the class
 

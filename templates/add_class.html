@@ -42,9 +42,89 @@
 
     <label for="time_of_day">Select Time of Day:</label><br />
     <input type="time" id="time_of_day" name="time_of_day" required /><br /><br />
+
+    <div id="field-list">
+      <!-- Initially empty, will be populated with field types dynamically -->
+    </div>
+
+    <button type="button" id="add-field-btn">Add Field</button>
+    <br /><br />
+    <input type="hidden" name="fields" id="fields" value="" />
+
     <!-- Submit Button -->
-    <button type="submit">Add Class</button>
+    <button type="submit" onclick="submit_click()">Add Class</button>
   </form>
+
+  <script>
+
+    const fieldTypes = {{field_types| tojson}};  // Pass field_types from Flask as JSON
+
+    const addFieldButton = document.getElementById('add-field-btn');
+    const fieldList = document.getElementById('field-list');
+    const form = document.getElementById('create-class-form');
+
+    // Handle the Add Field button click event
+    addFieldButton.addEventListener('click', function () {
+      const fieldDiv = document.createElement('div');
+      fieldDiv.classList.add('field-item');
+
+      const fieldSelect = document.createElement('select');
+      fieldSelect.classList.add('field-select');
+
+      // Populate the select dropdown with field types
+      fieldTypes.forEach(function (type) {
+        const option = document.createElement('option');
+        option.value = type.field_type_id;
+        option.textContent = type.field_type_name;
+        fieldSelect.appendChild(option);
+      });
+
+      const nameLabel = document.createElement('label');
+      nameLabel.textContent = 'field name:';
+      const fieldName = document.createElement('input');
+      fieldName.classList.add('field-name');
+      fieldName.type = 'text';
+      fieldDiv.appendChild(nameLabel);
+      fieldDiv.appendChild(fieldName);
+
+      const defaultLabel = document.createElement('label');
+      defaultLabel.textContent = ' Default values';
+      const defaultValues = document.createElement('input');
+      defaultValues.classList.add('default-values');
+      defaultValues.type = 'text';
+      fieldDiv.appendChild(defaultLabel);
+      fieldDiv.appendChild(defaultValues);
+
+      // Append the select and checkbox to the fieldDiv
+      fieldDiv.appendChild(fieldSelect);
+
+      // Append the new field item to the list
+      fieldList.appendChild(fieldDiv);
+    });
+
+    // Handle form submission to send fields data as JSON
+    function submit_click() {
+      console.log("submitted")
+
+      const fieldsData = [];
+      const fieldItems = document.querySelectorAll('.field-item');
+
+      fieldItems.forEach(function (item) {
+        console.log(item)
+        const fieldSelect = item.querySelector('.field-select');
+        const defaultValues = item.querySelector('.default-values');
+        const fieldName = item.querySelector('.field-name');
+        fieldsData.push({
+          field_type_id: fieldSelect.value,
+          defaul_values: defaultValues.value,
+          field_name: fieldName.value,
+        });
+      });
+      console.log(fieldsData)
+      document.getElementById("fields").value = JSON.stringify(fieldsData);
+
+    };
+  </script>
 </body>
 
 </html>

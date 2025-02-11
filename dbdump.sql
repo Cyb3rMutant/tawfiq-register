@@ -91,9 +91,37 @@ CREATE TABLE attendance (
     attendance_id INT AUTO_INCREMENT PRIMARY KEY,
     student_class_id INT NOT NULL,
     attendance_date DATE NOT NULL,
-    status ENUM('Present', 'Absent', 'Late') NOT NULL DEFAULT 'Absent',
-    notes VARCHAR(255),
     FOREIGN KEY (student_class_id) REFERENCES student_classes(student_class_id) ON DELETE CASCADE
+);
+
+CREATE TABLE field_types (
+  	field_type_id INT AUTO_INCREMENT PRIMARY KEY,
+  	field_type_name VARCHAR(23),
+  	field_type_defaults BOOL
+);
+
+INSERT INTO field_types (field_type_name, field_type_defaults) VALUES
+("text", false),
+("checkbox", true),
+("radio", true);
+ 
+CREATE TABLE class_fields (
+  	class_field_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    field_type_id INT NOT NULL,
+    field_name VARCHAR(50) NOT NULL,
+  	field_defauls JSON, 
+    FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
+    FOREIGN KEY (field_type_id) REFERENCES field_types(field_type_id) ON DELETE CASCADE
+);
+
+CREATE TABLE attendance_fields (
+  	attendance_field_id INT AUTO_INCREMENT PRIMARY KEY,
+  	attendance_id INT NOT NULL,
+  	class_field_id INT NOT NULL,
+  	field_value JSON,
+    FOREIGN KEY (attendance_id) REFERENCES attendance(attendance_id) ON DELETE CASCADE,
+    FOREIGN KEY (class_field_id) REFERENCES class_fields(class_field_id) ON DELETE CASCADE
 );
 
 -- Define packages and their prices
@@ -121,18 +149,6 @@ INSERT INTO package_classes ( package_id, class_id) VALUES
   (1, 2),
   (2, 3);
 
--- -- Track student purchases of packages
--- CREATE TABLE student_packages (
---     student_package_id INT AUTO_INCREMENT PRIMARY KEY,
---     student_id INT NOT NULL,
---     package_id INT NOT NULL,
---     FOREIGN KEY (student_id) REFERENCES students(student_id),
---     FOREIGN KEY (package_id) REFERENCES packages(package_id)
--- );
---
--- INSERT INTO student_packages (student_id, package_id) VALUES
---   (1, 1),
---   (2, 1);
 
 CREATE TABLE student_monthly_package_payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
