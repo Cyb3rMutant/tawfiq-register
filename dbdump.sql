@@ -41,11 +41,6 @@ CREATE TABLE classes (
     time_of_day TIME NOT NULL
 )ENGINE=InnoDB;
 
--- Insert predefined class options
-INSERT INTO classes (class_name, day_of_week, time_of_day) VALUES 
-('Islamic studies', "Sunday", "18:00"),
-('Quran', "Sunday", "17:00"),
-('Arabic', "Saturday", "18:00");
 
 -- Create `teachers` table
 CREATE TABLE teachers (
@@ -67,9 +62,6 @@ CREATE TABLE teacher_classes (
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE
 );
 
-INSERT INTO teacher_classes (teacher_id, class_id) VALUES 
-  (1, 2),
-  (2, 1);
 
 -- Create `student_classes` table (many-to-many relationship)
 CREATE TABLE student_classes (
@@ -80,17 +72,11 @@ CREATE TABLE student_classes (
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE
 );
 
-INSERT INTO student_classes (student_id, class_id) VALUES
-  (1, 2),
-  (2, 2),
-  (2, 1),
-  (1, 1),
-  (2, 3);
-
 CREATE TABLE attendance (
     attendance_id INT AUTO_INCREMENT PRIMARY KEY,
     student_class_id INT NOT NULL,
     attendance_date DATE NOT NULL,
+    status ENUM('Present', 'Absent', 'Late') NOT NULL DEFAULT 'Absent',
     FOREIGN KEY (student_class_id) REFERENCES student_classes(student_class_id) ON DELETE CASCADE
 );
 
@@ -110,7 +96,7 @@ CREATE TABLE class_fields (
     class_id INT NOT NULL,
     field_type_id INT NOT NULL,
     field_name VARCHAR(50) NOT NULL,
-  	field_defauls JSON, 
+  	field_defaults JSON NOT NULL, 
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
     FOREIGN KEY (field_type_id) REFERENCES field_types(field_type_id) ON DELETE CASCADE
 );
@@ -143,12 +129,6 @@ CREATE TABLE package_classes (
     FOREIGN KEY (package_id) REFERENCES packages(package_id),
     FOREIGN KEY (class_id) REFERENCES classes(class_id)
 );
-
-INSERT INTO package_classes ( package_id, class_id) VALUES
-  (1, 1),
-  (1, 2),
-  (2, 3);
-
 
 CREATE TABLE student_monthly_package_payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,

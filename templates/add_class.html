@@ -89,18 +89,48 @@
 
       const defaultLabel = document.createElement('label');
       defaultLabel.textContent = ' Default values';
-      const defaultValues = document.createElement('input');
-      defaultValues.classList.add('default-values');
-      defaultValues.type = 'text';
+      const defaultValuesContainer = document.createElement('div');
+      defaultValuesContainer.classList.add('default-values-container');
+
+      // Tag input
+      const tagInput = document.createElement('input');
+      tagInput.classList.add('tag-input');
+      tagInput.type = 'text';
+      tagInput.placeholder = 'Type and press Enter';
+
+      defaultValuesContainer.appendChild(tagInput);
       fieldDiv.appendChild(defaultLabel);
-      fieldDiv.appendChild(defaultValues);
+      fieldDiv.appendChild(defaultValuesContainer);
 
       // Append the select and checkbox to the fieldDiv
       fieldDiv.appendChild(fieldSelect);
 
       // Append the new field item to the list
       fieldList.appendChild(fieldDiv);
+
+      // Event listener for tag input
+      tagInput.addEventListener('keydown', function (event) {
+        if (event.key === "Enter" && tagInput.value.trim() !== "") {
+          event.preventDefault();
+          addTag(tagInput.value.trim(), defaultValuesContainer);
+          tagInput.value = "";
+        }
+      });
     });
+
+
+    // Function to create and add a tag
+    function addTag(text, container) {
+      const tag = document.createElement("div");
+      tag.classList.add("tag");
+      tag.innerHTML = `${text}<button onclick="removeTag(this)">×</button>`;
+      container.insertBefore(tag, container.lastElementChild);
+    }
+
+    // Remove tag function
+    function removeTag(button) {
+      button.parentElement.remove();
+    }
 
     // Handle form submission to send fields data as JSON
     function submit_click() {
@@ -112,12 +142,14 @@
       fieldItems.forEach(function (item) {
         console.log(item)
         const fieldSelect = item.querySelector('.field-select');
-        const defaultValues = item.querySelector('.default-values');
         const fieldName = item.querySelector('.field-name');
+        const tags = item.querySelectorAll('.default-values-container .tag');
+
+        const defaultValues = Array.from(tags).map(tag => tag.textContent.trim().replace("×", ""));
         fieldsData.push({
           field_type_id: fieldSelect.value,
-          defaul_values: defaultValues.value,
           field_name: fieldName.value,
+          defaultValues: defaultValues,
         });
       });
       console.log(fieldsData)
@@ -125,6 +157,43 @@
 
     };
   </script>
+
+  <style>
+    .default-values-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      min-height: 40px;
+      align-items: center;
+    }
+
+    .tag {
+      display: flex;
+      align-items: center;
+      background: #e5e7eb;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .tag button {
+      background: none;
+      border: none;
+      margin-left: 5px;
+      cursor: pointer;
+    }
+
+    .tag-input {
+      border: none;
+      outline: none;
+      font-size: 14px;
+      flex-grow: 1;
+      min-width: 120px;
+    }
+  </style>
 </body>
 
 </html>

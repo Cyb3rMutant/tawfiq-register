@@ -136,7 +136,9 @@ class Model:
         dbcursor.close()
         return data
 
-    def add_class(self, class_name, teacher_ids, package_id, day_of_week, time_of_day):
+    def add_class(
+        self, class_name, teacher_ids, package_id, day_of_week, time_of_day, fields
+    ):
         dbcursor = self.__conn.cursor(dictionary=True)
 
         # Insert the class with schedule details
@@ -145,6 +147,23 @@ class Model:
             (class_name, day_of_week, time_of_day),
         )
         new_class_id = dbcursor.lastrowid
+        for field in fields:
+            print(
+                field,
+                new_class_id,
+                field["field_type_id"],
+                field["field_name"],
+                field["defaultValues"],
+            )
+            dbcursor.execute(
+                "INSERT INTO class_fields (class_id, field_type_id, field_name, field_defaults) VALUES (%s, %s, %s, %s)",
+                (
+                    new_class_id,
+                    field["field_type_id"],
+                    field["field_name"],
+                    field["defaultValues"],
+                ),
+            )
 
         dbcursor.execute(
             "INSERT INTO package_classes (package_id, class_id) VALUES (%s, %s)",
@@ -244,16 +263,30 @@ class Model:
         return records
 
     def get_attendance(self, class_id, attendance_date):
+        import json
+
         dbcursor = self.__conn.cursor(dictionary=True)
 
+        # Fetch attendance records
         dbcursor.execute(
-            "SELECT sc.student_id AS student_id, s.full_name AS full_name, a.status AS status, a.notes AS notes, sp.paid AS paid "
-            "FROM attendance a "
-            "JOIN student_classes sc ON a.student_class_id = sc.student_class_id "
-            "JOIN students s ON sc.student_id = s.student_id "
-            "LEFT JOIN package_classes pc ON sc.class_id = pc.class_id "
-            "LEFT JOIN student_monthly_package_payments sp ON sp.package_id = pc.package_id AND sp.student_id = sc.student_id AND YEAR(sp.payment_month) = %s AND MONTH(sp.payment_month) = %s "
-            "WHERE sc.class_id = %s AND a.attendance_date = %s",
+            """
+            SELECT s.full_name AS full_name, 
+                   a.attendance_id AS attendance_id, 
+                   a.status AS status, 
+                   sp.payment_id AS payment_id,
+                   sp.paid AS paid
+            FROM attendance a
+            JOIN student_classes sc ON a.student_class_id = sc.student_class_id
+            JOIN students s ON sc.student_id = s.student_id
+            LEFT JOIN package_classes pc ON sc.class_id = pc.class_id
+            LEFT JOIN student_monthly_package_payments sp 
+                ON sp.package_id = pc.package_id 
+                AND sp.student_id = sc.student_id 
+                AND YEAR(sp.payment_month) = %s 
+                AND MONTH(sp.payment_month) = %s
+            WHERE sc.class_id = %s 
+              AND a.attendance_date = %s
+            """,
             (
                 attendance_date.year,
                 attendance_date.month,
@@ -261,10 +294,38 @@ class Model:
                 attendance_date.strftime("%Y-%m-%d"),
             ),
         )
-        records = dbcursor.fetchall()
-        dbcursor.close()
 
-        return records
+        attendance_records = dbcursor.fetchall()
+
+        # Fetch attendance field values for each attendance record
+        for record in attendance_records:
+            dbcursor.execute(
+                """
+                SELECT af.attendance_field_id, 
+                       af.field_value, 
+                       cf.class_field_id, 
+                       cf.field_name, 
+                       cf.field_defaults, 
+                       ft.field_type_name 
+                FROM attendance_fields af
+                JOIN class_fields cf ON af.class_field_id = cf.class_field_id
+                JOIN field_types ft ON cf.field_type_id = ft.field_type_id
+                WHERE af.attendance_id = %s
+                """,
+                (record["attendance_id"],),
+            )
+            record["fields"] = (
+                dbcursor.fetchall()
+            )  # Attach attendance fields to each attendance record
+            for f in record["fields"]:
+                f["field_defaults"] = [
+                    x for x in enumerate(json.loads(f["field_defaults"]))
+                ]
+                f["field_value"] = json.loads(f["field_value"])
+            print(record["fields"])
+
+        dbcursor.close()
+        return attendance_records
 
     def init_payment_month(self, class_id, payment_month: datetime):
         payment_month = datetime(payment_month.year, payment_month.month, 1).strftime(
@@ -291,8 +352,23 @@ class Model:
         dbcursor.close()
 
     def init_attendance_day(self, class_id, attendance_date):
+        print("initing attendancd")
+        import json
+
         dbcursor = self.__conn.cursor(dictionary=True)
         students = self.get_class_students(class_id)
+
+        # Get all class fields for the class
+        dbcursor.execute(
+            "SELECT class_field_id, field_type_id, field_defaults FROM class_fields WHERE class_id = %s",
+            (class_id,),
+        )
+        class_fields = dbcursor.fetchall()
+        # Get field type mapping
+        dbcursor.execute("SELECT field_type_id, field_type_name FROM field_types")
+        field_types = {
+            row["field_type_id"]: row["field_type_name"] for row in dbcursor.fetchall()
+        }
 
         for student in students:
             # Get the `student_class_id` for the student and class
@@ -307,6 +383,21 @@ class Model:
                 "INSERT INTO attendance (student_class_id, attendance_date) VALUES (%s, %s)",
                 (student_class_id, attendance_date.strftime("%Y-%m-%d")),
             )
+            attendance_id = dbcursor.lastrowid  # Get the inserted attendance_id
+
+            # Insert default values into attendance_fields
+            for field in class_fields:
+                field_type = field_types[field["field_type_id"]]
+
+                if field_type == "text" or field_type == "checkbox":
+                    default_value = []
+                elif field_type == "radio":
+                    default_value = [0]
+
+                dbcursor.execute(
+                    "INSERT INTO attendance_fields (attendance_id, class_field_id, field_value) VALUES (%s, %s, %s)",
+                    (attendance_id, field["class_field_id"], json.dumps(default_value)),
+                )
 
         self.__conn.commit()
         dbcursor.close()

@@ -1,11 +1,10 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mark Attendance</title>
-  <script>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mark Attendance</title>
+    <script>
     let lastUpdateTime = new Date(0, 0, 0);
 
     function updateAttendance(studentId, field, value) {
@@ -113,61 +112,80 @@
 
         // Update status (dropdown)
         const statusElement = document.getElementById(`student_${studentId}`);
-        if (statusElement && statusElement.tagName === "SELECT") {
-          statusElement.value = update.status; // Set the new status value
-        }
+        statusElement.value = update.status; // Set the new status value
 
         // Update paid (checkbox)
         const paidElement = document.getElementById(`paid_${studentId}`);
-        if (paidElement && paidElement.type === "checkbox") {
-          paidElement.checked = update.paid === 1; // Set the checkbox state
-        }
+        paidElement.checked = update.paid === 1; // Set the checkbox state
 
         // Update notes (text input) only if not being edited
         const notesElement = document.getElementById(`notes_${studentId}`);
-        if (
-          notesElement &&
-          notesElement.type === "text" &&
-          !notesLocks[studentId] // Skip if locked
-        ) {
+        if (!notesLocks[studentId]) {
+          // Skip if locked
           notesElement.value = update.notes; // Set the new notes value
         }
       });
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      setupEventListeners();
-      setInterval(pollServerForUpdates, 3000); // Poll the server every 3 seconds
-    });
-  </script>
-</head>
-
-<body>
-  <h1>Mark Attendance for the {{ class_data.class_name }} class</h1>
-  <form action="/mark_attendance/{{ class_data.class_id }}" method="POST">
-    {% for data in attendance %}
-    <label for="student_{{ data.student_id }}">{{ data.full_name }}:</label><br />
-    <select id="student_{{ data.student_id }}" name="student_{{ data.student_id }}">
-      <option value="Absent" {% if data.status=="Absent" %} selected="selected" {% endif %}>
-        Absent
-      </option>
-      <option value="Present" {% if data.status=="Present" %} selected="selected" {% endif %}>
-        Present
-      </option>
-      <option value="Late" {% if data.status=="Late" %} selected="selected" {% endif %}>
-        Late
-      </option>
-    </select><br />
-    <input type="checkbox" id="paid_{{ data.student_id }}" name="paid_{{ data.student_id }}" {% if data.paid %} checked
-      {% endif %} />
-    <label for="paid_{{ data.student_id }}">Paid</label><br />
-    <label for="notes_{{ data.student_id }}">Notes:</label><br />
-    <input type="text" id="notes_{{ data.student_id }}" name="notes_{{ data.student_id }}"
-      value="{{ data.notes }}" /><br /><br />
-    {% endfor %}
-
-    <button type="submit">Submit Attendance</button>
-  </form>
-</body>
-
-</html>
+    // document.addEventListener("DOMContentLoaded", () => {
+    //   setupEventListeners();
+    //   setInterval(pollServerForUpdates, 3000); // Poll the server every 3 seconds
+    // });
+    </script>
+  </head>
+  <body>
+    <h1>Mark Attendance for the {{ class_data.class_name }} class</h1>
+    <form action="/mark_attendance/{{ class_data.class_id }}" method="POST">
+      {% for data in attendance %}
+        <label for="student_{{ data.attendance_id }}">{{ data.full_name }}:</label>
+        <br />
+        <select id="student_{{ data.attendance_id }}"
+                name="student_{{ data.attendance_id }}">
+          <option value="Absent"
+                  {% if data.status=="Absent" %}selected="selected"{% endif %}>Absent</option>
+          <option value="Present"
+                  {% if data.status=="Present" %}selected="selected"{% endif %}>Present</option>
+          <option value="Late"
+                  {% if data.status=="Late" %}selected="selected"{% endif %}>Late</option>
+        </select>
+        <br />
+        <input type="checkbox"
+               id="paid_{{ data.payment_id }}"
+               name="paid_{{ data.payment_id }}"
+               {% if data.paid %}checked{% endif %} />
+        <label for="paid_{{ data.payment_id }}">Paid</label>
+        <br />
+        {% for field in data.fields %}
+          <label for="field_{{ field.attendance_field_id }}">{{ field.field_name }}</label>
+          <br />
+          {% if field.field_type_name == 'text' %}
+            <input type="text"
+                   id="field_{{ field.attendance_field_id }}"
+                   name="field_{{ field.attendance_field_id }}"
+                   value="{{ field.field_value[0] }}" />
+          {% elif field.field_type_name == 'radio' %}
+            <select id="field_{{ field.attendance_field_id }}"
+                    name="field_{{ field.attendance_field_id }}">
+              {% for idx, val in field.field_defaults %}
+                <option value="{{ idx }}"
+                        {% if idx in field.field_value %}selected="selected"{% endif %}>{{ val }}</option>
+              {% endfor %}
+            </select>
+            <br />
+          {% elif field.field_type_name == 'checkbox' %}
+            {% for idx, val in field.field_defaults %}
+              <input type="checkbox" id="field_{{ field.attendance_field_id }}_{{ idx }}"
+                name="field_{{ field.attendance_field_id }}" value="{{ idx }}" {% if idx in field.field_value %} checked {% endif
+                %} />
+                <label for="field_{{ field.attendance_field_id }}_{{ idx }}">{{ val }}</label>
+                <br />
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+          <br />
+          <br />
+        {% endfor %}
+        <button type="submit">Submit Attendance</button>
+      </form>
+    </body>
+  </html>

@@ -59,19 +59,24 @@ def add_teacher():
     return redirect(url_for("index"))  # Redirect after adding teacher
 
 
-@app.route("/sub")
-def sub():
-    fields = '[{"field_type_id":"2","defaul_values":"232,3132,3 12","field_name":"r23"},{"field_type_id":"1","defaul_values":"","field_name":"ru932"},{"field_type_id":"3","defaul_values":"324,42rf,vdsa","field_name":"432"}]'
+def parse_fields(fields):
+    field_types = model.get_field_types()
     fields = json.loads(fields)
-    print(fields)
+    for field in fields:
+        for t in field_types:
+            if int(field["field_type_id"]) == t["field_type_id"]:
+                if not t["field_type_defaults"]:
+                    field["defaultValues"] = []
+        else:
+            field["defaultValues"] = json.dumps(field["defaultValues"])
     return fields
 
 
 @app.route("/add_class", methods=["GET", "POST"])
 def add_class():
+    field_types = model.get_field_types()
     if request.method != "POST":
         # For GET request: Retrieve available teachers for the form
-        field_types = model.get_field_types()
         teachers = model.get_teachers()
         packages = model.get_packages()
         return render_template(
@@ -81,20 +86,22 @@ def add_class():
             field_types=field_types,
         )
 
-    # class_name = request.form["class_name"]
-    # teacher_ids = request.form.getlist("teacher_ids")  # Multiple teachers
-    # package_id = request.form["package_id"]
-    # day_of_week = request.form["day_of_week"]
-    # time_of_day = request.form["time_of_day"]
+    class_name = request.form["class_name"]
+    teacher_ids = request.form.getlist("teacher_ids")  # Multiple teachers
+    package_id = request.form["package_id"]
+    day_of_week = request.form["day_of_week"]
+    time_of_day = request.form["time_of_day"]
+    fields = parse_fields(request.form["fields"])
 
-    # # Call the function to add a class
-    # model.add_class(
-    #     class_name=class_name,
-    #     teacher_ids=teacher_ids,
-    #     package_id=package_id,
-    #     day_of_week=day_of_week,
-    #     time_of_day=time_of_day,
-    # )
+    # Call the function to add a class
+    model.add_class(
+        class_name=class_name,
+        teacher_ids=teacher_ids,
+        package_id=package_id,
+        day_of_week=day_of_week,
+        time_of_day=time_of_day,
+        fields=fields,
+    )
 
     return redirect(url_for("index"))  # Redirect after adding the class
 
@@ -173,8 +180,8 @@ def ajax_poll():
 @app.route("/mark_attendance/<int:class_id>", methods=["GET", "POST"])
 def mark_attendance(class_id):
     attendance_date = datetime.now()  # + timedelta(days=7 * 0)
-    print(attendance_date)
     class_data = model.get_class(class_id)
+    print(attendance_date, attendance_date.strftime("%A"), class_data["day_of_week"])
     if attendance_date.strftime("%A") != class_data["day_of_week"]:
         return "%s is not running today" % class_data["class_name"]
     if not model.get_class_payments(class_id, attendance_date):
@@ -190,27 +197,32 @@ def mark_attendance(class_id):
             "mark_attendance.html", attendance=attendance, class_data=class_data
         )
 
-    attendance_records = []
+    # note just collect attendance separatly then payments separatly then fields separatly since they have their own ids no need to be bound to student id
+    attendance_vals = {}
+    payment_vals = {}
+    field_vals = {}
 
-    # Retrieve attendance data for all students in the class
-    for key, value in request.form.items():
-        if key.startswith("student_"):  # Example: student_1
-            student_id = int(key.split("_")[1])
-            status = value
-            notes = request.form.get(f"notes_{student_id}", "")
-            paid = True if request.form.get(f"paid_{student_id}") == "on" else False
-            attendance_records.append(
-                {
-                    "student_id": student_id,
-                    "status": status,
-                    "notes": notes,
-                    "paid": paid,
-                }
-            )
+    for data in attendance:
+        attendance_vals[data["attendance_id"]] = request.form[
+            "student_{}".format(data["attendance_id"])
+        ]
+        payment_vals[data["payment_id"]] = int(
+            request.form.get("paid_{}".format(data["payment_id"]), "off") == "on"
+        )
 
-    print(attendance_records)
+        for field in data["fields"]:
 
-    model.mark_attendance(class_id, attendance_date, attendance_records)
+            field_values = request.form.getlist(
+                "field_{}".format(field["attendance_field_id"])
+            )  # Handles checkboxes
+            # Convert values to integers if possible
+            try:
+                field_values = [int(v) for v in field_values]
+            except ValueError:
+                pass  # Keep them as strings if conversion fails
+            field_vals[field["attendance_field_id"]] = field_values
+
+    # model.mark_attendance(class_id, attendance_date, attendance_records)
     return redirect(url_for("index"))  # Redirect after adding the class
 
 
