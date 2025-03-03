@@ -75,6 +75,15 @@ def parse_fields(fields):
 @app.route("/add_class", methods=["GET", "POST"])
 def add_class():
     field_types = model.get_field_types()
+    days_of_week = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
     if request.method != "POST":
         # For GET request: Retrieve available teachers for the form
         teachers = model.get_teachers()
@@ -83,13 +92,15 @@ def add_class():
             "add_class.html",
             teachers=teachers,
             packages=packages,
+            days_of_week=days_of_week,
             field_types=field_types,
         )
 
     class_name = request.form["class_name"]
     teacher_ids = request.form.getlist("teacher_ids")  # Multiple teachers
     package_id = request.form["package_id"]
-    day_of_week = request.form["day_of_week"]
+    selected_days = request.form.getlist("days_of_week")  # Get list of selected days
+    days_binary = "".join("1" if day in selected_days else "0" for day in days_of_week)
     time_of_day = request.form["time_of_day"]
     fields = parse_fields(request.form["fields"])
 
@@ -98,7 +109,7 @@ def add_class():
         class_name=class_name,
         teacher_ids=teacher_ids,
         package_id=package_id,
-        day_of_week=day_of_week,
+        days_of_week=days_binary,
         time_of_day=time_of_day,
         fields=fields,
     )
@@ -174,13 +185,43 @@ def ajax_poll():
         return model.get_attendance(class_id, attendance_date)
 
 
+def decode_days_binary(binary_string):
+    # Days of the week in order: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
+    days_of_week = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+
+    # Decode the binary string into days that are selected
+    selected_days = [days_of_week[i] for i in range(7) if binary_string[i] == "1"]
+
+    return selected_days
+
+
 @app.route("/mark_attendance/<int:class_id>", methods=["GET", "POST"])
 def mark_attendance(class_id):
-    attendance_date = datetime.now()  # + timedelta(days=7 * 0)
+    # Get the current date and day of the week
+    attendance_date = datetime.now()
+    current_day = attendance_date.strftime("%A")  # Get current day (e.g., "Monday")
+
+    # Fetch the class data from the database using the class_id
     class_data = model.get_class(class_id)
-    print(attendance_date, attendance_date.strftime("%A"), class_data["day_of_week"])
-    if attendance_date.strftime("%A") != class_data["day_of_week"]:
-        return "%s is not running today" % class_data["class_name"]
+    print(
+        f"Attendance Date: {attendance_date}, Current Day: {current_day}, Class Days: {class_data['days_of_week']}"
+    )
+
+    # Decode the binary days string into a list of active days
+    active_days = decode_days_binary(class_data["days_of_week"])
+    print(f"Active Days for Class {class_data['class_name']}: {active_days}")
+
+    # Check if the class is running today
+    if current_day not in active_days:
+        return f"{class_data['class_name']} is not running today."
     if not model.get_class_payments(class_id, attendance_date):
         model.init_payment_month(class_id, attendance_date)
     attendance = model.get_attendance(class_id, attendance_date)

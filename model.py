@@ -138,14 +138,14 @@ class Model:
         return data
 
     def add_class(
-        self, class_name, teacher_ids, package_id, day_of_week, time_of_day, fields
+        self, class_name, teacher_ids, package_id, days_of_week, time_of_day, fields
     ):
         dbcursor = self.__conn.cursor(dictionary=True)
 
         # Insert the class with schedule details
         dbcursor.execute(
-            "INSERT INTO classes (class_name, day_of_week, time_of_day) VALUES (%s, %s, %s)",
-            (class_name, day_of_week, time_of_day),
+            "INSERT INTO classes (class_name, days_of_week, time_of_day) VALUES (%s, %s, %s)",
+            (class_name, days_of_week, time_of_day),
         )
         new_class_id = dbcursor.lastrowid
         for field in fields:
