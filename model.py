@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import mysql.connector
 
 
@@ -263,7 +264,6 @@ class Model:
         return records
 
     def get_attendance(self, class_id, attendance_date):
-        import json
 
         dbcursor = self.__conn.cursor(dictionary=True)
 
@@ -353,7 +353,6 @@ class Model:
 
     def init_attendance_day(self, class_id, attendance_date):
         print("initing attendancd")
-        import json
 
         dbcursor = self.__conn.cursor(dictionary=True)
         students = self.get_class_students(class_id)
@@ -402,97 +401,61 @@ class Model:
         self.__conn.commit()
         dbcursor.close()
 
-    def update_attendance_field(
-        self, class_id, student_id, field, value, attendance_date
-    ):
+    def update_attendance_field(self, field_id, field, value):
         """
         attendance_records: List of dictionaries in the format:
         [{'student_id': 1, 'status': 'Present', 'notes': 'On time'}, ...]
         """
 
         dbcursor = self.__conn.cursor(dictionary=True)
-        if field == "paid":
-            value = True if value == "1" else False
-            print("paying", value)
-            payment_month = datetime(
-                attendance_date.year, attendance_date.month, 1
-            ).strftime("%Y-%m-%d")
-
+        if field == "student":
             dbcursor.execute(
-                "SELECT package_id FROM package_classes WHERE class_id = %s",
-                (class_id,),
+                "UPDATE attendance SET status = %s WHERE attendance_id = %s",
+                (value, field_id),
             )
-            package_id = dbcursor.fetchone()["package_id"]
+        elif field == "paid":
             dbcursor.execute(
-                "UPDATE student_monthly_package_payments SET paid = %s WHERE student_id = %s AND package_id = %s AND payment_month = %s",
-                (value, student_id, package_id, payment_month),
+                "UPDATE student_monthly_package_payments SET paid = %s WHERE payment_id  = %s",
+                (value == "on", field_id),
             )
         else:
-            print("attending")
-            # Get the `student_class_id` for the student and class
+            if field == "select":
+                value = [int(value)]
+            elif field == "checkbox":
+                value = [int(v) for v in value.split(",")]
+            elif field == "text":
+                value = [value]
+
+            print(field_id, field, value)
             dbcursor.execute(
-                "SELECT student_class_id FROM student_classes WHERE student_id = %s AND class_id = %s",
-                (student_id, class_id),
+                "UPDATE attendance_fields SET field_value = %s WHERE attendance_field_id = %s",
+                (json.dumps(value), field_id),
             )
-
-            student_class_id = dbcursor.fetchone()["student_class_id"]
-            print(student_class_id)
-
-            # Update the attendance recordallowed_fields = ["notes", "status", "remarks"]  # Add valid column names here
-            if field not in ["notes", "status"]:
-                raise ValueError("Invalid column name")
-            query = f"UPDATE attendance SET {field} = %s WHERE student_class_id = %s AND attendance_date = %s"
-            dbcursor.execute(
-                query,
-                (
-                    value,
-                    student_class_id,
-                    attendance_date.strftime("%Y-%m-%d"),
-                ),
-            )
-
         self.__conn.commit()
         dbcursor.close()
 
-    def mark_attendance(self, class_id, attendance_date, attendance_records):
+    def mark_attendance(self, attendance_vals, payment_vals, field_vals):
         """
         attendance_records: List of dictionaries in the format:
         [{'student_id': 1, 'status': 'Present', 'notes': 'On time'}, ...]
         """
-        payment_month = datetime(
-            attendance_date.year, attendance_date.month, 1
-        ).strftime("%Y-%m-%d")
-
         dbcursor = self.__conn.cursor(dictionary=True)
 
-        dbcursor.execute(
-            "SELECT package_id FROM package_classes WHERE class_id = %s",
-            (class_id,),
-        )
-        package_id = dbcursor.fetchone()["package_id"]
-
-        for record in attendance_records:
-            # Get the `student_class_id` for the student and class
+        for id, val in attendance_vals.items():
             dbcursor.execute(
-                "SELECT student_class_id FROM student_classes WHERE student_id = %s AND class_id = %s",
-                (record["student_id"], class_id),
+                "UPDATE attendance SET status = %s WHERE attendance_id = %s",
+                (val, id),
+            )
+        for id, val in payment_vals.items():
+            dbcursor.execute(
+                "UPDATE student_monthly_package_payments SET paid = %s WHERE payment_id = %s",
+                (val, id),
             )
 
-            student_class_id = dbcursor.fetchone()["student_class_id"]
-
-            # Update the attendance record
+        for id, val in field_vals.items():
             dbcursor.execute(
-                "UPDATE attendance SET status = %s, notes = %s WHERE student_class_id = %s AND attendance_date = %s",
-                (
-                    record["status"],
-                    record.get("notes", ""),
-                    student_class_id,
-                    attendance_date.strftime("%Y-%m-%d"),
-                ),
-            )
-            dbcursor.execute(
-                "UPDATE student_monthly_package_payments SET paid = %s WHERE student_id = %s AND package_id = %s AND payment_month = %s",
-                (record["paid"], record["student_id"], package_id, payment_month),
+                "UPDATE attendance_fields SET field_value = %s WHERE attendance_field_id = %s",
+                (json.dumps(val), id),
             )
 
         self.__conn.commit()

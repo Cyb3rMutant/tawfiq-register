@@ -147,17 +147,14 @@ def assign_students():
 
 @app.route("/ajax_server/", methods=["POST", "GET"])
 def ajax_server():
+    print("called")
     global server_last_update_time
     if request.method == "GET":
-        attendance_date = datetime.now() + timedelta(days=7 * 0)
-        class_id = request.args.get("class_id")
-        student_id = request.args.get("student_id")
+        field_id = request.args.get("field_id")
         field = request.args.get("field")
         value = request.args.get("value")
-        print(attendance_date, class_id, student_id, field, value)
-        model.update_attendance_field(
-            class_id, student_id, field, value, attendance_date
-        )
+        print(field_id, field, value)
+        model.update_attendance_field(field_id, field, value)
 
         server_last_update_time = datetime.now()
         return str(server_last_update_time)
@@ -192,6 +189,7 @@ def mark_attendance(class_id):
         model.init_attendance_day(class_id, attendance_date)
         attendance = model.get_attendance(class_id, attendance_date)
 
+    print(attendance)
     if request.method != "POST":
         return render_template(
             "mark_attendance.html", attendance=attendance, class_data=class_data
@@ -214,7 +212,7 @@ def mark_attendance(class_id):
 
             field_values = request.form.getlist(
                 "field_{}".format(field["attendance_field_id"])
-            )  # Handles checkboxes
+            )  # Handles checkbox
             # Convert values to integers if possible
             try:
                 field_values = [int(v) for v in field_values]
@@ -222,7 +220,8 @@ def mark_attendance(class_id):
                 pass  # Keep them as strings if conversion fails
             field_vals[field["attendance_field_id"]] = field_values
 
-    # model.mark_attendance(class_id, attendance_date, attendance_records)
+    print(attendance_vals, payment_vals, field_vals)
+    model.mark_attendance(attendance_vals, payment_vals, field_vals)
     return redirect(url_for("index"))  # Redirect after adding the class
 
 
