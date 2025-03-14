@@ -1,194 +1,187 @@
-<!doctype html>
-<html lang="en">
+{% extends "base.html" %} {% block title %}Add class{% endblock %} {% block
+content %}
+<h1>Add New Class</h1>
+<form action="/add_class" method="POST">
+  <!-- Class Name -->
+  <label for="class_name">Class Name:</label><br />
+  <input type="text" id="class_name" name="class_name" required /><br /><br />
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Add Class</title>
-</head>
+  <!-- Teachers -->
+  <label for="teacher_ids">Select Teachers:</label><br />
+  {% for teacher in teachers %}
+  <input type="checkbox" id="teacher_{{ teacher.teacher_id }}" name="teacher_ids" value="{{ teacher.teacher_id }}" />
+  <label for="teacher_{{ teacher.teacher_id }}">{{ teacher.teacher_name }}</label><br />
+  {% endfor %}
+  <br />
 
-<body>
-  <h1>Add New Class</h1>
-  <form action="/add_class" method="POST">
-    <!-- Class Name -->
-    <label for="class_name">Class Name:</label><br />
-    <input type="text" id="class_name" name="class_name" required /><br /><br />
+  <label for="package_id">Select package:</label><br />
+  {% for package in packages %}
+  <input type="radio" id="package_{{ package.package_id }}" name="package_id" value="{{ package.package_id }}" />
+  <label for="package_{{ package.package_id }}">{{ package.package_name }}</label><br />
+  {% endfor %}
+  <br />
 
-    <!-- Teachers -->
-    <label for="teacher_ids">Select Teachers:</label><br />
-    {% for teacher in teachers %}
-    <input type="checkbox" id="teacher_{{ teacher.teacher_id }}" name="teacher_ids" value="{{ teacher.teacher_id }}" />
-    <label for="teacher_{{ teacher.teacher_id }}">{{ teacher.teacher_name }}</label><br />
-    {% endfor %}
-    <br />
+  <label for="days_of_week">Select Days of the Week:</label><br />
+  {% for day in days_of_week %}
+  <input type="checkbox" id="{{ day }}" name="days_of_week" value="{{ day }}" />
+  {{ day }}<br />
+  {% endfor %}
+  <br />
 
-    <label for="package_id">Select package:</label><br />
-    {% for package in packages %}
-    <input type="radio" id="package_{{ package.package_id }}" name="package_id" value="{{ package.package_id }}" />
-    <label for="package_{{ package.package_id }}">{{ package.package_name }}</label><br />
-    {% endfor %}
-    <br />
+  <label for="time_of_day">Select Time of Day:</label><br />
+  <input type="time" id="time_of_day" name="time_of_day" required /><br /><br />
 
-    <label for="days_of_week">Select Days of the Week:</label><br />
-    {% for day in days_of_week %}
-    <input type="checkbox" id="{{ day }}" name="days_of_week" value="{{ day }}" />
-    {{ day }}<br />
-    {% endfor %}
+  <div id="field-list">
+    <!-- Initially empty, will be populated with field types dynamically -->
+  </div>
 
-    <label for="time_of_day">Select Time of Day:</label><br />
-    <input type="time" id="time_of_day" name="time_of_day" required /><br /><br />
+  <button type="button" id="add-field-btn">Add Field</button>
+  <br /><br />
+  <input type="hidden" name="fields" id="fields" value="" />
 
-    <div id="field-list">
-      <!-- Initially empty, will be populated with field types dynamically -->
-    </div>
+  <!-- Submit Button -->
+  <button type="submit" onclick="submit_click()">Add Class</button>
+</form>
 
-    <button type="button" id="add-field-btn">Add Field</button>
-    <br /><br />
-    <input type="hidden" name="fields" id="fields" value="" />
+<script>
 
-    <!-- Submit Button -->
-    <button type="submit" onclick="submit_click()">Add Class</button>
-  </form>
+  const fieldTypes = {{field_types| tojson}};  // Pass field_types from Flask as JSON
 
-  <script>
+  const addFieldButton = document.getElementById('add-field-btn');
+  const fieldList = document.getElementById('field-list');
+  const form = document.getElementById('create-class-form');
 
-    const fieldTypes = {{field_types| tojson}};  // Pass field_types from Flask as JSON
+  // Handle the Add Field button click event
+  addFieldButton.addEventListener('click', function () {
+    const fieldDiv = document.createElement('div');
+    fieldDiv.classList.add('field-item');
 
-    const addFieldButton = document.getElementById('add-field-btn');
-    const fieldList = document.getElementById('field-list');
-    const form = document.getElementById('create-class-form');
+    const fieldSelect = document.createElement('select');
+    fieldSelect.classList.add('field-select');
 
-    // Handle the Add Field button click event
-    addFieldButton.addEventListener('click', function () {
-      const fieldDiv = document.createElement('div');
-      fieldDiv.classList.add('field-item');
-
-      const fieldSelect = document.createElement('select');
-      fieldSelect.classList.add('field-select');
-
-      // Populate the select dropdown with field types
-      fieldTypes.forEach(function (type) {
-        const option = document.createElement('option');
-        option.value = type.field_type_id;
-        option.textContent = type.field_type_name;
-        fieldSelect.appendChild(option);
-      });
-
-      const nameLabel = document.createElement('label');
-      nameLabel.textContent = 'field name:';
-      const fieldName = document.createElement('input');
-      fieldName.classList.add('field-name');
-      fieldName.type = 'text';
-      fieldDiv.appendChild(nameLabel);
-      fieldDiv.appendChild(fieldName);
-
-      const defaultLabel = document.createElement('label');
-      defaultLabel.textContent = ' Default values';
-      const defaultValuesContainer = document.createElement('div');
-      defaultValuesContainer.classList.add('default-values-container');
-
-      // Tag input
-      const tagInput = document.createElement('input');
-      tagInput.classList.add('tag-input');
-      tagInput.type = 'text';
-      tagInput.placeholder = 'Type and press Enter';
-
-      defaultValuesContainer.appendChild(tagInput);
-      fieldDiv.appendChild(defaultLabel);
-      fieldDiv.appendChild(defaultValuesContainer);
-
-      // Append the select and checkbox to the fieldDiv
-      fieldDiv.appendChild(fieldSelect);
-
-      // Append the new field item to the list
-      fieldList.appendChild(fieldDiv);
-
-      // Event listener for tag input
-      tagInput.addEventListener('keydown', function (event) {
-        if (event.key === "Enter" && tagInput.value.trim() !== "") {
-          event.preventDefault();
-          addTag(tagInput.value.trim(), defaultValuesContainer);
-          tagInput.value = "";
-        }
-      });
+    // Populate the select dropdown with field types
+    fieldTypes.forEach(function (type) {
+      const option = document.createElement('option');
+      option.value = type.field_type_id;
+      option.textContent = type.field_type_name;
+      fieldSelect.appendChild(option);
     });
 
+    const nameLabel = document.createElement('label');
+    nameLabel.textContent = 'field name:';
+    const fieldName = document.createElement('input');
+    fieldName.classList.add('field-name');
+    fieldName.type = 'text';
+    fieldDiv.appendChild(nameLabel);
+    fieldDiv.appendChild(fieldName);
 
-    // Function to create and add a tag
-    function addTag(text, container) {
-      const tag = document.createElement("div");
-      tag.classList.add("tag");
-      tag.innerHTML = `${text}<button onclick="removeTag(this)">×</button>`;
-      container.insertBefore(tag, container.lastElementChild);
-    }
+    const defaultLabel = document.createElement('label');
+    defaultLabel.textContent = ' Default values';
+    const defaultValuesContainer = document.createElement('div');
+    defaultValuesContainer.classList.add('default-values-container');
 
-    // Remove tag function
-    function removeTag(button) {
-      button.parentElement.remove();
-    }
+    // Tag input
+    const tagInput = document.createElement('input');
+    tagInput.classList.add('tag-input');
+    tagInput.type = 'text';
+    tagInput.placeholder = 'Type and press Enter';
 
-    // Handle form submission to send fields data as JSON
-    function submit_click() {
-      console.log("submitted")
+    defaultValuesContainer.appendChild(tagInput);
+    fieldDiv.appendChild(defaultLabel);
+    fieldDiv.appendChild(defaultValuesContainer);
 
-      const fieldsData = [];
-      const fieldItems = document.querySelectorAll('.field-item');
+    // Append the select and checkbox to the fieldDiv
+    fieldDiv.appendChild(fieldSelect);
 
-      fieldItems.forEach(function (item) {
-        console.log(item)
-        const fieldSelect = item.querySelector('.field-select');
-        const fieldName = item.querySelector('.field-name');
-        const tags = item.querySelectorAll('.default-values-container .tag');
+    // Append the new field item to the list
+    fieldDiv.appendChild(document.createElement('hr'));
+    fieldList.appendChild(fieldDiv);
 
-        const defaultValues = Array.from(tags).map(tag => tag.textContent.trim().replace("×", ""));
-        fieldsData.push({
-          field_type_id: fieldSelect.value,
-          field_name: fieldName.value,
-          defaultValues: defaultValues,
-        });
+
+    // Event listener for tag input
+    tagInput.addEventListener('keydown', function (event) {
+      if (event.key === "Enter" && tagInput.value.trim() !== "") {
+        event.preventDefault();
+        addTag(tagInput.value.trim(), defaultValuesContainer);
+        tagInput.value = "";
+      }
+    });
+  });
+
+
+  // Function to create and add a tag
+  function addTag(text, container) {
+    const tag = document.createElement("div");
+    tag.classList.add("tag");
+    tag.innerHTML = `${text}<button onclick="removeTag(this)">×</button>`;
+    container.insertBefore(tag, container.lastElementChild);
+  }
+
+  // Remove tag function
+  function removeTag(button) {
+    button.parentElement.remove();
+  }
+
+  // Handle form submission to send fields data as JSON
+  function submit_click() {
+    console.log("submitted")
+
+    const fieldsData = [];
+    const fieldItems = document.querySelectorAll('.field-item');
+
+    fieldItems.forEach(function (item) {
+      console.log(item)
+      const fieldSelect = item.querySelector('.field-select');
+      const fieldName = item.querySelector('.field-name');
+      const tags = item.querySelectorAll('.default-values-container .tag');
+
+      const defaultValues = Array.from(tags).map(tag => tag.textContent.trim().replace("×", ""));
+      fieldsData.push({
+        field_type_id: fieldSelect.value,
+        field_name: fieldName.value,
+        defaultValues: defaultValues,
       });
-      console.log(fieldsData)
-      document.getElementById("fields").value = JSON.stringify(fieldsData);
+    });
+    console.log(fieldsData)
+    document.getElementById("fields").value = JSON.stringify(fieldsData);
 
-    };
-  </script>
+  };
+</script>
 
-  <style>
-    .default-values-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      min-height: 40px;
-      align-items: center;
-    }
+<style>
+  .default-values-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    min-height: 40px;
+    align-items: center;
+  }
 
-    .tag {
-      display: flex;
-      align-items: center;
-      background: #e5e7eb;
-      padding: 5px 10px;
-      border-radius: 6px;
-      font-size: 14px;
-    }
+  .tag {
+    display: flex;
+    align-items: center;
+    background: #e5e7eb;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 14px;
+  }
 
-    .tag button {
-      background: none;
-      border: none;
-      margin-left: 5px;
-      cursor: pointer;
-    }
+  .tag button {
+    background: none;
+    border: none;
+    margin-left: 5px;
+    cursor: pointer;
+  }
 
-    .tag-input {
-      border: none;
-      outline: none;
-      font-size: 14px;
-      flex-grow: 1;
-      min-width: 120px;
-    }
-  </style>
-</body>
-
-</html>
+  .tag-input {
+    border: none;
+    outline: none;
+    font-size: 14px;
+    flex-grow: 1;
+    min-width: 120px;
+  }
+</style>
+{% endblock %}

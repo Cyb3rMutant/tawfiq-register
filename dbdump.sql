@@ -1,7 +1,3 @@
-ALTER DATABASE register
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-
 -- Create `students` table
 CREATE TABLE students (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -9,7 +5,7 @@ CREATE TABLE students (
     age INT NOT NULL,
     gender ENUM('Male', 'Female') NOT NULL,
     phone_number VARCHAR(15) NOT NULL
-)ENGINE=InnoDB;
+);
 
 INSERT INTO students (full_name, age, gender, phone_number) VALUES
   ("Yazeed Abu-Hummos", 22, "Male", "7742903241"),
@@ -23,7 +19,7 @@ CREATE TABLE emergency_contacts (
     contact_phone_number VARCHAR(15) NOT NULL,
     relationship VARCHAR(50) NOT NULL,
     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
-)ENGINE=InnoDB;
+);
 
 -- Create `special_requirements` table
 CREATE TABLE special_requirements (
@@ -39,7 +35,7 @@ CREATE TABLE classes (
     class_name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
     days_of_week CHAR(7) NOT NULL,
     time_of_day TIME NOT NULL
-)ENGINE=InnoDB;
+);
 
 
 -- Create `teachers` table
@@ -47,7 +43,7 @@ CREATE TABLE teachers (
     teacher_id INT AUTO_INCREMENT PRIMARY KEY,
     teacher_name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
     phone_number VARCHAR(15)
-)ENGINE=InnoDB;
+);
 
 INSERT INTO teachers (teacher_name, phone_number) VALUES 
   ("Ustadh Anas Abdelsami", "2093493247"),

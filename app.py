@@ -3,13 +3,11 @@ from flask import (
     json,
     request,
     render_template,
-    send_file,
     url_for,
     redirect,
-    session,
 )
 from model import model
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 
 # from passlib.hash import sha256_crypt
 

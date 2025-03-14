@@ -1,0 +1,42 @@
+/* Table Styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+}
+
+th {
+  background-color: #004225;
+  color: white;
+}
+
+td {
+  background-color: #f8f9fa;
+}
+
+/* Navigation Links for Period Selection */
+div {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+div a {
+  background-color: #004225;
+  color: white;
+  padding: 8px 12px;
+  text-decoration: none;
+  border-radius: 5px;
+  margin: 5px;
+  display: inline-block;
+}
+
+div a:hover {
+  background-color: #006400;
+}

@@ -1,54 +1,44 @@
-<!doctype html>
-<html lang="en">
+{% extends "base.html" %} {% block title %}Add student{% endblock %} {% block
+content %}
+<h1>Add New Student</h1>
+<form action="/add_student" method="POST">
+  <!-- Full Name -->
+  <label for="full_name">Full Name:</label>
+  <input type="text" id="full_name" name="full_name" required /><br /><br />
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Add Student</title>
-</head>
+  <!-- Age -->
+  <label for="age">Age:</label>
+  <input type="number" id="age" name="age" min="1" required /><br /><br />
 
-<body>
-  <h1>Add New Student</h1>
-  <form action="/add_student" method="POST">
-    <!-- Full Name -->
-    <label for="full_name">Full Name:</label><br />
-    <input type="text" id="full_name" name="full_name" required /><br /><br />
+  <!-- Gender -->
+  <label>Gender:</label><br />
+  <input type="radio" id="male" name="gender" value="Male" required />
+  <label for="male">Male</label><br />
+  <input type="radio" id="female" name="gender" value="Female" />
+  <label for="female">Female</label><br /><br />
 
-    <!-- Age -->
-    <label for="age">Age:</label><br />
-    <input type="number" id="age" name="age" min="1" required /><br /><br />
+  <!-- Phone Number -->
+  <label for="phone_number">Phone Number:</label>
+  <input type="tel" id="phone_number" name="phone_number" required /><br /><br />
 
-    <!-- Gender -->
-    <label>Gender:</label><br />
-    <input type="radio" id="male" name="gender" value="Male" required />
-    <label for="male">Male</label><br />
-    <input type="radio" id="female" name="gender" value="Female" />
-    <label for="female">Female</label><br /><br />
+  <!-- Classes -->
+  <label for="classes">Classes:</label>
+  <select id="classes" name="classes" multiple required>
+    {% for class_item in classes %}
+    <option value="{{ class_item.class_id }}">
+      {{ class_item.class_name }}
+    </option>
+    {% endfor %}
+  </select>
 
-    <!-- Phone Number -->
-    <label for="phone_number">Phone Number:</label><br />
-    <input type="tel" id="phone_number" name="phone_number" required /><br /><br />
+  <small>Hold Ctrl (Cmd on Mac) to select multiple classes.</small><br /><br />
 
-    <!-- Classes -->
-    <label for="classes">Classes:</label><br />
-    <select id="classes" name="classes" multiple required>
-      {% for class_item in classes %}
-      <option value="{{ class_item.class_id }}">
-        {{ class_item.class_name }}
-      </option>
-      {% endfor %}
-    </select><br />
+  <!-- Special Requirements -->
+  <label for="special_requirements">Special Requirements or Allergies:</label>
+  <textarea id="special_requirements" name="special_requirements" rows="4" cols="50"
+    placeholder="Optional"></textarea><br /><br />
 
-    <small>Hold Ctrl (Cmd on Mac) to select multiple classes.</small><br /><br />
-
-    <!-- Special Requirements -->
-    <label for="special_requirements">Special Requirements or Allergies:</label><br />
-    <textarea id="special_requirements" name="special_requirements" rows="4" cols="50"
-      placeholder="Optional"></textarea><br /><br />
-
-    <!-- Submit Button -->
-    <button type="submit">Add Student</button>
-  </form>
-</body>
-
-</html>
+  <!-- Submit Button -->
+  <button type="submit">Add Student</button>
+</form>
+{% endblock %}

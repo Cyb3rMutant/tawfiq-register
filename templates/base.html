@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Register App{% endblock %}</title>
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+    }
+
+    header {
+      background-color: #014421;
+      padding: 10px;
+      text-align: center;
+      color: white;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background-color: #014421;
+      color: white;
+    }
+
+    .logo {
+      align-items: center;
+      display: flex;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .menu-toggle {
+      font-size: 24px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .nav-links {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      gap: 15px;
+    }
+
+    .nav-links li {
+      display: inline;
+    }
+
+    .nav-links a, .logo-link {
+      text-decoration: none;
+      color: white;
+    }
+
+    main {
+      padding: 20px;
+      text-align: center;
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px;
+      background-color: #014421;
+      color: white;
+      /* position: fixed; */
+      width: 100%;
+      bottom: 0;
+    }
+
+    /* General Form Styles */
+    form {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      margin: auto;
+    }
+
+    label {
+      font-weight: bold;
+      /* display: block; */
+      margin-bottom: 5px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      background-color: #004225;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #006400;
+    }
+
+    /* Checkbox & Radio Styling */
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: auto;
+      margin-right: 5px;
+    }
+
+    /* Form Title Styling */
+    h1 {
+      text-align: center;
+      color: #004225;
+    }
+
+    @media (max-width: 768px) {
+      .menu-toggle {
+        display: block;
+      }
+
+      .nav-links {
+        display: none;
+        flex-direction: column;
+        background-color: #014421;
+        position: absolute;
+        width: 100%;
+        top: 50px;
+        left: 0;
+        padding: 10px;
+      }
+
+      .nav-links.active {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <nav>
+      <a href="/" class="logo-link">
+        <div class="logo">
+          <img
+            src="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=142,h=146,fit=crop/dJo4188B9NU4rV7M/logo-silple-10-Awv40bwWyVfoQEKb.png"
+            alt="tawfiq logo" style="width: 40px" />
+          Masjid Tawfiq Register
+        </div>
+      </a>
+      <div class="menu-toggle">☰</div>
+      <ul class="nav-links">
+        <li><a href="/"><b>Home</b></a></li>
+        <li><a href="/add_package">Add Package</a></li>
+        <li><a href="/add_class">Add Class</a></li>
+        <li><a href="/add_student">Add Student</a></li>
+        <li><a href="/add_teacher">Add Teacher</a></li>
+        <li><a href="/assign_students">Assign Students</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer>
+    <p>&copy; 2025 Tawfiq Masjid & Centre</p>
+  </footer>
+
+  <script>
+    document
+      .querySelector(".menu-toggle")
+      .addEventListener("click", function () {
+        document.querySelector(".nav-links").classList.toggle("active");
+      });
+  </script>
+</body>
+
+</html>

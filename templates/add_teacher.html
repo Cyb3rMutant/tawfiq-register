@@ -1,23 +1,13 @@
-<!doctype html>
-<html lang="en">
+{% extends "base.html" %} {% block title %}Add teacher{% endblock %} {% block
+content %}
+<h1>Add New Teacher</h1>
+<form action="/add_teacher" method="POST">
+  <label for="teacher_name">Teacher Name:</label>
+  <input type="text" id="teacher_name" name="teacher_name" required /><br /><br />
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Add Class</title>
-</head>
+  <label for="phone_number">Phone Number:</label>
+  <input type="tel" id="phone_number" name="phone_number" required /><br /><br />
 
-<body>
-  <h1>Add New Teacher</h1>
-  <form action="/add_teacher" method="POST">
-    <label for="teacher_name">Teacher Name:</label><br />
-    <input type="text" id="teacher_name" name="teacher_name" required /><br /><br />
-
-    <label for="phone_number">Phone Number:</label><br />
-    <input type="tel" id="phone_number" name="phone_number" required /><br /><br />
-
-    <button type="submit">Add Teacher</button>
-  </form>
-</body>
-
-</html>
+  <button type="submit">Add Teacher</button>
+</form>
+{% endblock %}

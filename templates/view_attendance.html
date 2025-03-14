@@ -1,57 +1,32 @@
-<!doctype html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>View Attendance</title>
-  <style>
-    table {
-      border-collapse: collapse;
-    }
-
-    th,
-    td {
-      border: 1px solid black;
-      padding: 8px;
-      text-align: center;
-    }
-
-    th {
-      background-color: #f2f2f2;
-    }
-  </style>
-</head>
-
-<body>
-  <h1>Attendance for the {{ class_data.class_name }} class</h1>
-  <p>Viewing: {{ current_period }}</p>
-  <div>
-    <a href="{{ url_for('view_attendance', class_id=class_data.class_id, start_date=prev_start_date) }}">Previous 3
-      Months</a>
-    <a href="{{ url_for('view_attendance', class_id=class_data.class_id, start_date=next_start_date) }}">Next 3
-      Months</a>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>Name / Date</th>
-        {% for d in dates %}
-        <th>{{ d }}</th>
-        {% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for name in names %}
-      <tr>
-        <td>{{ name }}</td>
-        {% for d in dates %}
-        <td>{{ lookup.get((name, d), 'N/A') }}</td>
-        {% endfor %}
-      </tr>
+{% extends "base.html" %} {% block title %}View attendance{% endblock %} {%
+block content %}
+<link href="{{ url_for('static', filename='views/style.css') }}" rel="stylesheet" />
+<h1>Attendance for the {{ class_data.class_name }} class</h1>
+<p>Viewing: {{ current_period }}</p>
+<div>
+  <a href="{{ url_for('view_attendance', class_id=class_data.class_id, start_date=prev_start_date) }}">Previous 3
+    Months</a>
+  <a href="{{ url_for('view_attendance', class_id=class_data.class_id, start_date=next_start_date) }}">Next 3 Months</a>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Name / Date</th>
+      {% for d in dates %}
+      <th>{{ d }}</th>
       {% endfor %}
-    </tbody>
-  </table>
-</body>
+    </tr>
+  </thead>
+  <tbody>
+    {% for name in names %}
+    <tr>
+      <td>{{ name }}</td>
+      {% for d in dates %}
+      <td>{{ lookup.get((name, d), 'N/A') }}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 
-</html>
+{% endblock %}

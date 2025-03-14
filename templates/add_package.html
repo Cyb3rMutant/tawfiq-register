@@ -1,24 +1,14 @@
-<!doctype html>
-<html lang="en">
+{% extends "base.html" %} {% block title %}Add package{% endblock %} {% block
+content %}
+<h1>Add New package</h1>
+<form action="/add_package" method="POST">
+  <!-- package Name -->
+  <label for="package_name">package Name:</label>
+  <input type="text" id="package_name" name="package_name" required /><br /><br />
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Add package</title>
-</head>
-
-<body>
-  <h1>Add New package</h1>
-  <form action="/add_package" method="POST">
-    <!-- package Name -->
-    <label for="package_name">package Name:</label><br />
-    <input type="text" id="package_name" name="package_name" required /><br /><br />
-
-    <label for="price">price:</label><br />
-    <input type="number" id="price" name="price" required /><br /><br />
-    <!-- Submit Button -->
-    <button type="submit">Add package</button>
-  </form>
-</body>
-
-</html>
+  <label for="price">price:</label>
+  <input type="number" id="price" name="price" required /><br /><br />
+  <!-- Submit Button -->
+  <button type="submit">Add package</button>
+</form>
+{% endblock %}

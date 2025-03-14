@@ -1,224 +1,209 @@
-<!doctype html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mark Attendance</title>
-  <script>
-    let lastUpdateTime = new Date(0, 0, 0);
-
-    function updateAttendance(fieldId, field, value) {
-      var xmlhttp = new XMLHttpRequest();
-      xmlhttp.onreadystatechange = function () {
-        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-          console.log("Attendance updated:", xmlhttp.responseText);
-        }
-      };
-      xmlhttp.open(
-        "GET",
-        `/ajax_server?field_id=${fieldId}&field=${field}&value=${encodeURIComponent(
-          value,
-        )}`,
-        true,
-      );
-      xmlhttp.send();
-    }
-
-    function setupEventListeners() {
-      const selects = document.querySelectorAll("select");
-      const checkboxes = document.querySelectorAll("input[type='checkbox']");
-      const textInputs = document.querySelectorAll("input[type='text']");
-
-      // Attach change event listeners to dropdowns
-      selects.forEach((select) => {
-        select.addEventListener("change", (event) => {
-          const [kind, fieldId] = event.target.id.split("_");
-          const value = event.target.value;
-          updateAttendance(
-            fieldId,
-            kind == "student" ? "student" : "select",
-            value,
-          );
-        });
-      });
-
-      // Attach change event listeners to checkboxes
-      checkboxes.forEach((checkbox) => {
-        checkbox.addEventListener("change", (event) => {
-          const [kind, fieldId] = event.target.id.split("_");
-          // const value = event.target.value;
-          // const stat = event.target.checked ? "1" : "0";
-          // const final = `${value}_${stat}`;
-          const value = Array.from(
-            document.getElementsByName(event.target.name),
-          )
-            .filter((f) => f.checked)
-            .map((f) => f.value);
-          updateAttendance(
-            fieldId,
-            kind == "paid" ? "paid" : "checkbox",
-            value,
-          );
-        });
-      });
-
-      // Attach event listeners to text inputs
-      textInputs.forEach((textInput) => {
-        const fieldId = textInput.id.split("_")[1];
-
-        // Lock field when typing starts
-        textInput.addEventListener("focus", () => {
-          textLocks[fieldId] = true; // Lock the field
-        });
-
-        // Unlock field after typing ends
-        textInput.addEventListener("blur", () => {
-          textLocks[fieldId] = false; // Unlock the field
-          const value = textInput.value;
-          updateAttendance(fieldId, "text", value);
-        });
-      });
-    }
-
-    function pollServerForUpdates() {
-      const xmlhttp = new XMLHttpRequest();
-      xmlhttp.onreadystatechange = function () {
-        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-          try {
-            // const updates = JSON.parse(xmlhttp.responseText);
-            const updates = JSON.parse(xmlhttp.responseText);
-            console.log(updates, typeof updates);
-            if (updates.length) {
-              lastUpdateTime = new Date();
-              applyUpdates(updates);
-            }
-          } catch (e) {
-            console.error("Error parsing server response:", e);
-          }
-        }
-      };
-      var datetime =
-        lastUpdateTime.getDate() +
-        "/" +
-        (lastUpdateTime.getMonth() + 1) +
-        "/" +
-        lastUpdateTime.getFullYear() +
-        " " +
-        lastUpdateTime.getHours() +
-        ":" +
-        lastUpdateTime.getMinutes() +
-        ":" +
-        lastUpdateTime.getSeconds();
-      xmlhttp.open(
-        "GET",
-        `/ajax_poll?class_id={{ class_data.class_id }}&value=${encodeURIComponent(
-          datetime,
-        )}`,
-        true,
-      ); // Adjust endpoint as needed
-      xmlhttp.send();
-    }
-
-    let textLocks = {}; // Object to track locked notes fields by student_id
-
-    function applyUpdates(attendanceData) {
-      attendanceData.forEach((student) => {
-        // Set the status dropdown
-        document.getElementById(`student_${student.attendance_id}`).value =
-          student.status;
-
-        // Set the paid checkbox
-        document.getElementById(`paid_${student.payment_id}`).checked =
-          Boolean(student.paid);
-
-        // Iterate over fields
-        student.fields.forEach((field) => {
-          if (field.field_type_name === "text") {
-            // Set text input value
-            const textInput = document.getElementById(
-              `field_${field.attendance_field_id}`,
-            );
-            if (!textLocks[field.attendance_field_id]) {
-              textInput.value = field.field_value[0] || "";
-            }
-          } else if (field.field_type_name === "radio") {
-            // Set radio select value
-            document.getElementById(
-              `field_${field.attendance_field_id}`,
-            ).value = field.field_value[0];
-          } else if (field.field_type_name === "checkbox") {
-            // Set checkboxes
-            field.field_defaults.forEach(([idx, _]) => {
-              const checkbox = document.getElementById(
-                `field_${field.attendance_field_id}_${idx}`,
-              );
-              if (checkbox) {
-                checkbox.checked = field.field_value.includes(idx);
-              }
-            });
-          }
-        });
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      setupEventListeners();
-      setInterval(pollServerForUpdates, 1000); // Poll the server every 3 seconds
-    });
-  </script>
-</head>
-
-<body>
-  <h1>Mark Attendance for the {{ class_data.class_name }} class</h1>
-  <form action="/mark_attendance/{{ class_data.class_id }}" method="POST">
-    {% for data in attendance %}
-    <label for="student_{{ data.attendance_id }}">{{ data.full_name }}:</label>
-    <br />
-    <select id="student_{{ data.attendance_id }}" name="student_{{ data.attendance_id }}">
-      <option value="Absent" {% if data.status=="Absent" %}selected="selected" {% endif %}>
-        Absent
-      </option>
-      <option value="Present" {% if data.status=="Present" %}selected="selected" {% endif %}>
-        Present
-      </option>
-      <option value="Late" {% if data.status=="Late" %}selected="selected" {% endif %}>
-        Late
-      </option>
-    </select>
-    <br />
-    <input type="checkbox" id="paid_{{ data.payment_id }}" name="paid_{{ data.payment_id }}" {% if data.paid %}checked{%
-      endif %} />
-    <label for="paid_{{ data.payment_id }}">Paid</label>
-    <br />
-    {% for field in data.fields %}
-    <label for="field_{{ field.attendance_field_id }}">{{ field.field_name }}</label>
-    <br />
-    {% if field.field_type_name == 'text' %}
-    <input type="text" id="field_{{ field.attendance_field_id }}" name="field_{{ field.attendance_field_id }}"
-      value="{{ field.field_value[0] }}" />
-    {% elif field.field_type_name == 'radio' %}
-    <select id="field_{{ field.attendance_field_id }}" name="field_{{ field.attendance_field_id }}">
-      {% for idx, val in field.field_defaults %}
-      <option value="{{ idx }}" {% if idx in field.field_value %}selected="selected" {% endif %}>
-        {{ val }}
-      </option>
-      {% endfor %}
-    </select>
-    <br />
-    {% elif field.field_type_name == 'checkbox' %} {% for idx, val in
-    field.field_defaults %}
-    <input type="checkbox" id="field_{{ field.attendance_field_id }}_{{ idx }}"
-      name="field_{{ field.attendance_field_id }}" value="{{ idx }}" {% if idx in field.field_value %} checked {% endif
-      %} />
-    <label for="field_{{ field.attendance_field_id }}_{{ idx }}">{{ val }}</label>
-    <br />
-    {% endfor %} {% endif %} {% endfor %}
-    <br />
-    <br />
+{% extends "base.html" %} {% block title %}Mark attendance{% endblock %} {%
+block content %}
+<h1>Mark Attendance for the {{ class_data.class_name }} class</h1>
+<form action="/mark_attendance/{{ class_data.class_id }}" method="POST">
+  {% for data in attendance %}
+  <label for="student_{{ data.attendance_id }}">{{ data.full_name }}:</label>
+  <br />
+  <select id="student_{{ data.attendance_id }}" name="student_{{ data.attendance_id }}">
+    <option value="Absent" {% if data.status=="Absent" %}selected="selected" {% endif %}>
+      Absent
+    </option>
+    <option value="Present" {% if data.status=="Present" %}selected="selected" {% endif %}>
+      Present
+    </option>
+    <option value="Late" {% if data.status=="Late" %}selected="selected" {% endif %}>
+      Late
+    </option>
+  </select>
+  <br />
+  <input type="checkbox" id="paid_{{ data.payment_id }}" name="paid_{{ data.payment_id }}" {% if data.paid %}checked{%
+    endif %} />
+  <label for="paid_{{ data.payment_id }}">Paid</label>
+  <br />
+  {% for field in data.fields %}
+  <label for="field_{{ field.attendance_field_id }}">{{ field.field_name }}</label>
+  <br />
+  {% if field.field_type_name == 'text' %}
+  <input type="text" id="field_{{ field.attendance_field_id }}" name="field_{{ field.attendance_field_id }}"
+    value="{{ field.field_value[0] }}" />
+  {% elif field.field_type_name == 'radio' %}
+  <select id="field_{{ field.attendance_field_id }}" name="field_{{ field.attendance_field_id }}">
+    {% for idx, val in field.field_defaults %}
+    <option value="{{ idx }}" {% if idx in field.field_value %}selected="selected" {% endif %}>
+      {{ val }}
+    </option>
     {% endfor %}
-    <button type="submit">Submit Attendance</button>
-  </form>
-</body>
+  </select>
+  <br />
+  {% elif field.field_type_name == 'checkbox' %} {% for idx, val in
+  field.field_defaults %}
+  <input type="checkbox" id="field_{{ field.attendance_field_id }}_{{ idx }}"
+    name="field_{{ field.attendance_field_id }}" value="{{ idx }}" {% if idx in field.field_value %} checked {% endif
+    %} />
+  <label for="field_{{ field.attendance_field_id }}_{{ idx }}">{{ val }}</label>
+  <br />
+  {% endfor %} {% endif %} {% endfor %}
+  <br />
+  <br />
+  {% endfor %}
+  <button type="submit">Submit Attendance</button>
+</form>
 
-</html>
+<script>
+  let lastUpdateTime = new Date(0, 0, 0);
+
+  function updateAttendance(fieldId, field, value) {
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+      if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+        console.log("Attendance updated:", xmlhttp.responseText);
+      }
+    };
+    xmlhttp.open(
+      "GET",
+      `/ajax_server?field_id=${fieldId}&field=${field}&value=${encodeURIComponent(
+        value,
+      )}`,
+      true,
+    );
+    xmlhttp.send();
+  }
+
+  function setupEventListeners() {
+    const selects = document.querySelectorAll("select");
+    const checkboxes = document.querySelectorAll("input[type='checkbox']");
+    const textInputs = document.querySelectorAll("input[type='text']");
+
+    // Attach change event listeners to dropdowns
+    selects.forEach((select) => {
+      select.addEventListener("change", (event) => {
+        const [kind, fieldId] = event.target.id.split("_");
+        const value = event.target.value;
+        updateAttendance(
+          fieldId,
+          kind == "student" ? "student" : "select",
+          value,
+        );
+      });
+    });
+
+    // Attach change event listeners to checkboxes
+    checkboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", (event) => {
+        const [kind, fieldId] = event.target.id.split("_");
+        // const value = event.target.value;
+        // const stat = event.target.checked ? "1" : "0";
+        // const final = `${value}_${stat}`;
+        const value = Array.from(document.getElementsByName(event.target.name))
+          .filter((f) => f.checked)
+          .map((f) => f.value);
+        updateAttendance(fieldId, kind == "paid" ? "paid" : "checkbox", value);
+      });
+    });
+
+    // Attach event listeners to text inputs
+    textInputs.forEach((textInput) => {
+      const fieldId = textInput.id.split("_")[1];
+
+      // Lock field when typing starts
+      textInput.addEventListener("focus", () => {
+        textLocks[fieldId] = true; // Lock the field
+      });
+
+      // Unlock field after typing ends
+      textInput.addEventListener("blur", () => {
+        textLocks[fieldId] = false; // Unlock the field
+        const value = textInput.value;
+        updateAttendance(fieldId, "text", value);
+      });
+    });
+  }
+
+  function pollServerForUpdates() {
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+      if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+        try {
+          // const updates = JSON.parse(xmlhttp.responseText);
+          const updates = JSON.parse(xmlhttp.responseText);
+          console.log(updates, typeof updates);
+          if (updates.length) {
+            lastUpdateTime = new Date();
+            applyUpdates(updates);
+          }
+        } catch (e) {
+          console.error("Error parsing server response:", e);
+        }
+      }
+    };
+    var datetime =
+      lastUpdateTime.getDate() +
+      "/" +
+      (lastUpdateTime.getMonth() + 1) +
+      "/" +
+      lastUpdateTime.getFullYear() +
+      " " +
+      lastUpdateTime.getHours() +
+      ":" +
+      lastUpdateTime.getMinutes() +
+      ":" +
+      lastUpdateTime.getSeconds();
+    xmlhttp.open(
+      "GET",
+      `/ajax_poll?class_id={{ class_data.class_id }}&value=${encodeURIComponent(
+        datetime,
+      )}`,
+      true,
+    ); // Adjust endpoint as needed
+    xmlhttp.send();
+  }
+
+  let textLocks = {}; // Object to track locked notes fields by student_id
+
+  function applyUpdates(attendanceData) {
+    attendanceData.forEach((student) => {
+      // Set the status dropdown
+      document.getElementById(`student_${student.attendance_id}`).value =
+        student.status;
+
+      // Set the paid checkbox
+      document.getElementById(`paid_${student.payment_id}`).checked = Boolean(
+        student.paid,
+      );
+
+      // Iterate over fields
+      student.fields.forEach((field) => {
+        if (field.field_type_name === "text") {
+          // Set text input value
+          const textInput = document.getElementById(
+            `field_${field.attendance_field_id}`,
+          );
+          if (!textLocks[field.attendance_field_id]) {
+            textInput.value = field.field_value[0] || "";
+          }
+        } else if (field.field_type_name === "radio") {
+          // Set radio select value
+          document.getElementById(`field_${field.attendance_field_id}`).value =
+            field.field_value[0];
+        } else if (field.field_type_name === "checkbox") {
+          // Set checkboxes
+          field.field_defaults.forEach(([idx, _]) => {
+            const checkbox = document.getElementById(
+              `field_${field.attendance_field_id}_${idx}`,
+            );
+            if (checkbox) {
+              checkbox.checked = field.field_value.includes(idx);
+            }
+          });
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setupEventListeners();
+    setInterval(pollServerForUpdates, 1000); // Poll the server every 3 seconds
+  });
+</script>
+{% endblock %}
