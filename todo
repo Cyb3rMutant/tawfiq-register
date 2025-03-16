@@ -1,1 +1,2 @@
 in the assign students page, check if student is already assigned to class and make it checked if so
+when you assign a student to a class after the init_month has been initialized, that student doesn't exist in the payments

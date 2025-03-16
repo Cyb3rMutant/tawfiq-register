@@ -4,16 +4,24 @@ block content %}
 <h1>Attendance for the {{ class_data.class_name }} class</h1>
 <p>Viewing: {{ current_period }}</p>
 <div>
-  <a href="{{ url_for('view_attendance', class_id=class_data.class_id, start_date=prev_start_date) }}">Previous 3
-    Months</a>
-  <a href="{{ url_for('view_attendance', class_id=class_data.class_id, start_date=next_start_date) }}">Next 3 Months</a>
+  <a href="{{ url_for('view_attendance', class_id=class_data.class_id, start_date=prev_start_date) }}">Previous 1
+    Month</a>
+  <a href="{{ url_for('view_attendance', class_id=class_data.class_id, start_date=next_start_date) }}">Next 1 Month</a>
 </div>
 <table>
   <thead>
     <tr>
       <th>Name / Date</th>
       {% for d in dates %}
-      <th>{{ d }}</th>
+        <th colspan="{{ all_fields|length }}">{{ d }}</th>
+      {% endfor %}
+    </tr>
+    <tr>
+      <th></th>
+      {% for d in dates %}
+        {% for field in all_fields %}
+          <th>{{ field }}</th>
+        {% endfor %}
       {% endfor %}
     </tr>
   </thead>
@@ -22,11 +30,22 @@ block content %}
     <tr>
       <td>{{ name }}</td>
       {% for d in dates %}
-      <td>{{ lookup.get((name, d), 'N/A') }}</td>
+        {% for field in all_fields %}
+          <td>
+            {% set value = lookup.get((name, d)) %}
+            {% if value %}
+              {{ value.get(field) }}
+            {% else %}
+              N/A
+            {% endif %}
+          </td>
+        {% endfor %}
       {% endfor %}
     </tr>
     {% endfor %}
   </tbody>
 </table>
+
+
 
 {% endblock %}

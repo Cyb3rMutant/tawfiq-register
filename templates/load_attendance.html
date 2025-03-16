@@ -1,0 +1,50 @@
+{% extends "base.html" %} {% block title %}Load attendance{% endblock %} {%
+block content %}
+<h1>Load attendance</h1>
+<form action="/load_attendance" method="post" enctype="multipart/form-data">
+  <label for="file">Choose an Excel file:</label>
+  <input type="file" name="file" id="file" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required />
+  <select id="class_id" name="class_id" required onchange="showFields()">
+    <option value="">Select a class</option>
+    {% for class_item in classes %}
+      <option value="{{ class_item.class_id }}">
+        {{ class_item.class_name }}
+      </option>
+    {% endfor %}
+  </select><br /><br />
+
+  <div id="class_fields"></div>
+
+  <button type="submit">Upload</button>
+</form>
+
+<script>
+  const classesData = {{ classes|tojson }}; // Assuming you are passing classes to the template
+
+  function showFields() {
+    const classId = document.getElementById("class_id").value;
+    const classFieldsContainer = document.getElementById("class_fields");
+    classFieldsContainer.innerHTML = ''; // Clear previous fields
+
+    if (classId) {
+
+    classFieldsContainer.innerHTML = `
+            <p> What are the abbreviations for these fields: </p>
+            <label>Attendance</label>
+            <input type="text" name="attendance" />
+            `; // Clear previous fields
+      const selectedClass = classesData.find(cls => cls.class_id == classId);
+      if (selectedClass && selectedClass.fields.length > 0) {
+        selectedClass.fields.forEach(field => {
+          const fieldElement = document.createElement('div');
+          fieldElement.innerHTML = `
+            <label>${field.field_name}</label>
+            <input type="text" name="field_${field.class_field_id}" required />
+          `;
+          classFieldsContainer.appendChild(fieldElement);
+        });
+      } 
+    }
+  }
+</script>
+{% endblock %}

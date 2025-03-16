@@ -1,3 +1,4 @@
+import re
 from flask import (
     Flask,
     json,
@@ -8,6 +9,8 @@ from flask import (
 )
 from model import model
 from datetime import datetime, timedelta
+import io
+import openpyxl
 
 # from passlib.hash import sha256_crypt
 
@@ -267,8 +270,51 @@ def mark_attendance(class_id):
 from datetime import datetime, timedelta
 
 
+def parse_fields_2(data):
+    for entry in data:
+        parsed_entry = {"status": entry["status"]}
+        for field in entry["fields"]:
+            field_name = field.get("field_name")
+            field_value = field.get("field_value")
+            field_type_name = field.get("field_type_name")
+            field_defaults = field.get("field_defaults", [])
+
+            if not field_value:
+                parsed_entry[field_name] = ""
+                continue
+
+            # Handle text field
+            if field_type_name == "text":
+                parsed_entry[field_name] = field_value[0]
+
+            # Handle radio field
+            elif field_type_name == "radio":
+                selected_index = field_value[0]
+                # Get the corresponding label from field_defaults
+                selected_label = next(
+                    (
+                        label
+                        for value, label in field_defaults
+                        if value == selected_index
+                    ),
+                    None,
+                )
+                parsed_entry[field_name] = selected_label
+
+            # Handle checkbox field
+            elif field_type_name == "checkbox":
+                selected_labels = [
+                    label for value, label in field_defaults if value in field_value
+                ]
+                parsed_entry[field_name] = selected_labels
+
+        entry["fields"] = parsed_entry
+
+
 @app.route("/view_attendance/<int:class_id>")
 def view_attendance(class_id):
+    from pprint import pprint
+
     # Get the start_date from the query string or default to the current date
     start_date_str = request.args.get("start_date", None)
     if start_date_str:
@@ -284,13 +330,15 @@ def view_attendance(class_id):
     attendance = model.get_class_attendance_in_date_range(
         class_id, start_date, end_date
     )
+    parse_fields_2(attendance)
 
     # Extract unique names and dates within the range
     names = sorted(set(item["full_name"] for item in attendance))
     dates = sorted(set(item["date"] for item in attendance))
 
     # Build a lookup dictionary for quick access
-    lookup = {(item["full_name"], item["date"]): item["status"] for item in attendance}
+    lookup = {(item["full_name"], item["date"]): item["fields"] for item in attendance}
+    all_fields = list(lookup.values())[0].keys() if lookup else [""]
 
     # Calculate previous and next start dates
     prev_start_date = (start_date - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -301,6 +349,7 @@ def view_attendance(class_id):
         names=names,
         dates=dates,
         lookup=lookup,
+        all_fields=all_fields,
         class_data=class_data,
         prev_start_date=prev_start_date,
         next_start_date=next_start_date,
@@ -347,4 +396,144 @@ def view_payments(class_id):
     )
 
 
+# Route to handle file upload
+@app.route("/load_attendance", methods=["POST", "GET"])
+def load_attendance():
+    classes = model.get_classes_with_fields()
+    if request.method != "POST":
+        return render_template("load_attendance.html", classes=classes)
+
+    file = request.files["file"]
+
+    class_id = int(request.form["class_id"])
+    fields_items = [
+        f for f in (c["fields"] for c in classes if c["class_id"] == class_id)
+    ][0]
+    fields = {
+        request.form["field_" + str(f["class_field_id"])]: f["class_field_id"]
+        for f in fields_items
+    }
+    fields[request.form["attendance"]] = "attendance"
+    print(fields)
+
+    # try:
+    data = process_file(file, fields)
+    model.load_attendance_data(class_id, data)
+
+    # Return data or render it in a template
+    return f"Data from the first row: {data[0]}"
+
+    # except Exception as e:
+    #     return f"Error opening file: {e}"
+
+
+def process_file(file, fields_names):
+    file_stream = io.BytesIO(file.read())
+    ws = openpyxl.load_workbook(file_stream).active
+
+    def find_pattern_and_breakoff(dates, labels):
+        # Step 1: Find the length of the repeating pattern in the labels.
+        def find_repeating_pattern(lst):
+            for length in range(1, len(lst) // 2 + 1):
+                # Check if a pattern of length `length` repeats throughout the list
+                pattern = lst[:length]
+                repeated_pattern = pattern * (len(lst) // length)
+                if repeated_pattern == lst[: len(repeated_pattern)]:
+                    return length
+            return len(
+                lst
+            )  # In case there's no repeating pattern, return the length of the list
+
+        # Step 2: Find the break-off point where dates become all `None`
+        def find_breakoff(dates, pattern_length):
+            for i in range(0, len(dates), pattern_length):
+                if dates[i] is None:
+                    # Check if it's followed by a sequence of `None` values
+                    if all(val is None for val in dates[i:]):
+                        return i
+            return len(
+                dates
+            )  # If no None sequence found, return the length of the list
+
+        # Find the repeating pattern length in the labels
+        repeating_pattern_length = find_repeating_pattern(labels)
+
+        # Find the break-off point in the dates
+        breakoff_point = find_breakoff(dates, repeating_pattern_length)
+
+        return repeating_pattern_length, breakoff_point
+
+    dates = [ws.cell(row=1, column=i).value for i in range(1, ws.max_column + 1)][2:]
+    fields = [ws.cell(row=2, column=i).value for i in range(1, ws.max_column + 1)][2:]
+
+    num_fileds, num_days = find_pattern_and_breakoff(dates, fields)
+    if num_fileds != len(fields_names):
+        print(num_fileds, len(fields_names))
+        raise Exception("INCORRECT NUMBER OF FIELDS")
+
+    names = [ws.cell(row=i, column=2).value for i in range(3, ws.max_row + 1)]
+
+    breakoff_index = next(
+        (index for index, value in enumerate(names) if value is None), len(names)
+    )
+
+    attendance = []
+    rows = list(
+        ws.iter_rows(
+            min_row=3,
+            max_row=breakoff_index + 2,
+            min_col=3,
+            max_col=num_fileds * num_days + 2,
+        )
+    )
+
+    field_names = [fields[i] for i in range(num_fileds)]
+    # Loop over days
+    attendance = [
+        {
+            "date": dates[day],
+            "records": [
+                {
+                    "full_name": names[idx],
+                    "fields": [
+                        {
+                            "field_id": fields_names[f],
+                            "field_value": row[day + i].value,
+                        }
+                        for i, f in enumerate(field_names)
+                    ],
+                }
+                for idx, row in enumerate(rows)
+            ],
+        }
+        for day in range(0, num_days, num_fileds)
+    ]
+
+    return attendance
+
+
 app.run(debug=True, host="0.0.0.0")
+
+x = [
+    {
+        "date": datetime.datetime(2025, 1, 4, 0, 0),
+        "records": [
+            {
+                "full_name": "yazeed",
+                "fields": [
+                    {"field_id": "attendance", "field_value": "yes"},
+                    {"field_id": 1, "field_value": "done"},
+                    {"field_id": 2, "field_value": "bad"},
+                ],
+            },
+            {
+                "full_name": "amin",
+                "fields": [
+                    {"field_id": "attendance", "field_value": "yes"},
+                    {"field_id": 1, "field_value": "not done"},
+                    {"field_id": 2, "field_value": "bad"},
+                ],
+            },
+        ],
+    },
+]

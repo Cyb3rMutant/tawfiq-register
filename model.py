@@ -100,6 +100,19 @@ class Model:
         self.__conn.commit()
         dbcursor.close()
 
+    def get_classes_with_fields(self):
+        dbcursor = self.__conn.cursor(dictionary=True)
+        dbcursor.execute("SELECT class_id, class_name FROM classes")
+        classes = dbcursor.fetchall()
+        for c in classes:
+            dbcursor.execute(
+                "SELECT class_field_id, field_type_id, field_name, field_defaults FROM class_fields WHERE class_id = %s",
+                (c["class_id"],),
+            )
+            c["fields"] = dbcursor.fetchall()
+        dbcursor.close()
+        return classes
+
     def get_classes(self):
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute("SELECT * FROM classes")
@@ -250,7 +263,7 @@ class Model:
         dbcursor = self.__conn.cursor(dictionary=True)
 
         dbcursor.execute(
-            "SELECT sc.student_id AS student_id, s.full_name AS full_name, a.status AS status, a.attendance_date AS date "
+            "SELECT a.attendance_id, sc.student_id AS student_id, s.full_name AS full_name, a.status AS status, a.attendance_date AS date "
             "FROM attendance a "
             "JOIN student_classes sc ON a.student_class_id = sc.student_class_id "
             "JOIN students s ON sc.student_id = s.student_id "
@@ -259,6 +272,28 @@ class Model:
             (class_id, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")),
         )
         records = dbcursor.fetchall()
+
+        for record in records:
+            dbcursor.execute(
+                """
+                SELECT af.field_value, 
+                       cf.field_name, 
+                       cf.field_defaults, 
+                       ft.field_type_name 
+                FROM attendance_fields af
+                JOIN class_fields cf ON af.class_field_id = cf.class_field_id
+                JOIN field_types ft ON cf.field_type_id = ft.field_type_id
+                WHERE af.attendance_id = %s
+                """,
+                (record["attendance_id"],),
+            )
+            record["fields"] = dbcursor.fetchall()
+            for f in record["fields"]:
+                f["field_defaults"] = [
+                    x for x in enumerate(json.loads(f["field_defaults"]))
+                ]
+                f["field_value"] = json.loads(f["field_value"])
+
         dbcursor.close()
 
         return records
@@ -314,9 +349,7 @@ class Model:
                 """,
                 (record["attendance_id"],),
             )
-            record["fields"] = (
-                dbcursor.fetchall()
-            )  # Attach attendance fields to each attendance record
+            record["fields"] = dbcursor.fetchall()
             for f in record["fields"]:
                 f["field_defaults"] = [
                     x for x in enumerate(json.loads(f["field_defaults"]))
@@ -457,6 +490,100 @@ class Model:
                 "UPDATE attendance_fields SET field_value = %s WHERE attendance_field_id = %s",
                 (json.dumps(val), id),
             )
+
+        self.__conn.commit()
+        dbcursor.close()
+
+    def load_attendance_data(self, class_id, attendance_data):
+        dbcursor = self.__conn.cursor(dictionary=True)
+
+        # Get class fields and field type mappings
+        dbcursor.execute(
+            "SELECT class_field_id, field_type_id, field_defaults FROM class_fields WHERE class_id = %s",
+            (class_id,),
+        )
+        class_fields = {row["class_field_id"]: row for row in dbcursor.fetchall()}
+
+        dbcursor.execute("SELECT field_type_id, field_type_name FROM field_types")
+        field_types = {
+            row["field_type_id"]: row["field_type_name"] for row in dbcursor.fetchall()
+        }
+
+        # Process each attendance date
+        for day in attendance_data:
+            attendance_date = day["date"].strftime("%Y-%m-%d")
+
+            for record in day["records"]:
+                full_name = record["full_name"]
+
+                # Get student_id
+                dbcursor.execute(
+                    "SELECT student_id FROM students WHERE full_name = %s", (full_name,)
+                )
+                student_row = dbcursor.fetchone()
+                if not student_row:
+                    print(f"Student {full_name} not found. Skipping.")
+                    continue
+                student_id = student_row["student_id"]
+
+                # Get student_class_id
+                dbcursor.execute(
+                    "SELECT student_class_id FROM student_classes WHERE student_id = %s AND class_id = %s",
+                    (student_id, class_id),
+                )
+                student_class_row = dbcursor.fetchone()
+                if not student_class_row:
+                    print(f"Student {full_name} is not in class {class_id}. Skipping.")
+                    continue
+                student_class_id = student_class_row["student_class_id"]
+
+                # Insert attendance record
+                dbcursor.execute(
+                    "INSERT INTO attendance (student_class_id, attendance_date) VALUES (%s, %s)",
+                    (student_class_id, attendance_date),
+                )
+                attendance_id = dbcursor.lastrowid
+
+                # Process fields
+                for field in record["fields"]:
+                    field_id = field["field_id"]
+                    field_value = field["field_value"]
+
+                    if field_id == "attendance":
+                        field_value = [field_value]  # Store as an array
+                        dbcursor.execute(
+                            "UPDATE attendance SET status = %s WHERE attendance_id = %s",
+                            (field_value[0], attendance_id),
+                        )
+                        continue
+
+                    # Convert field_id to int if it's not "attendance"
+                    field_id = int(field_id)
+                    if field_id not in class_fields:
+                        print(
+                            f"Field ID {field_id} not found for class {class_id}. Skipping."
+                        )
+                        continue
+
+                    class_field = class_fields[field_id]
+                    field_type = field_types[class_field["field_type_id"]]
+                    field_defaults = json.loads(class_field["field_defaults"])
+
+                    # Format field_value based on field type
+                    if field_type == "text":
+                        field_value = [field_value]
+                    elif field_type in {"radio", "checkbox"}:
+                        field_value = (
+                            [field_defaults.index(field_value)]
+                            if field_value in field_defaults
+                            else []
+                        )
+
+                    # Insert into attendance_fields
+                    dbcursor.execute(
+                        "INSERT INTO attendance_fields (attendance_id, class_field_id, field_value) VALUES (%s, %s, %s)",
+                        (attendance_id, field_id, json.dumps(field_value)),
+                    )
 
         self.__conn.commit()
         dbcursor.close()
