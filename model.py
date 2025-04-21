@@ -171,8 +171,8 @@ class Model:
             SELECT s.full_name AS student_name, p.package_name AS package_name, p.price AS price, smpp.paid AS paid 
             FROM student_classes sc
             JOIN students s ON sc.student_id = s.student_id
-            JOIN package_classes pc ON sc.class_id = pc.class_id
-            JOIN packages p ON pc.package_id = p.package_id
+            JOIN classes c ON sc.class_id = c.class_id
+            JOIN packages p ON c.package_id = p.package_id
             JOIN student_monthly_package_payments smpp ON smpp.student_id = s.student_id AND smpp.package_id = p.package_id AND smpp.payment_month = %s
             WHERE sc.class_id = %s;
             """,
@@ -190,8 +190,8 @@ class Model:
 
         # Insert the class with schedule details
         dbcursor.execute(
-            "INSERT INTO classes (class_name, days_of_week, time_of_day) VALUES (%s, %s, %s)",
-            (class_name, days_of_week, time_of_day),
+            "INSERT INTO classes (class_name, days_of_week, time_of_day, package_id) VALUES (%s, %s, %s, %s)",
+            (class_name, days_of_week, time_of_day, package_id),
         )
         new_class_id = dbcursor.lastrowid
         for field in fields:
@@ -212,11 +212,6 @@ class Model:
                 ),
             )
 
-        dbcursor.execute(
-            "INSERT INTO package_classes (package_id, class_id) VALUES (%s, %s)",
-            (package_id, new_class_id),
-        )
-
         # Link teachers to the class
         for teacher_id in teacher_ids:
             dbcursor.execute(
@@ -230,10 +225,6 @@ class Model:
     def assign_students_to_class(self, class_id, student_ids):
         print(class_id, student_ids)
         dbcursor = self.__conn.cursor(dictionary=True)
-        dbcursor.execute(
-            "SELECT package_id FROM package_classes WHERE class_id = %s", (class_id,)
-        )
-        package_id = dbcursor.fetchone()["package_id"]
 
         for student_id in student_ids:
             dbcursor.execute(
@@ -265,8 +256,8 @@ class Model:
             "SELECT sc.student_id AS student_id, s.full_name AS full_name, sp.paid AS paid, sp.payment_month AS date, p.full_name AS payer_name, p.phone_number AS payer_phone_number "
             "FROM student_classes sc "
             "JOIN students s ON sc.student_id = s.student_id "
-            "LEFT JOIN package_classes pc ON sc.class_id = pc.class_id "
-            "LEFT JOIN student_monthly_package_payments sp ON sp.package_id = pc.package_id AND sp.student_id = sc.student_id "
+            "LEFT JOIN classes c ON sc.class_id = c.class_id "
+            "LEFT JOIN student_monthly_package_payments sp ON sp.package_id = c.package_id AND sp.student_id = sc.student_id "
             "LEFT JOIN payers p ON s.payer_id = p.payer_id "
             "WHERE sc.class_id = %s AND sp.payment_month BETWEEN %s AND %s",
             (class_id, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")),
@@ -283,8 +274,8 @@ class Model:
             "SELECT sc.student_id AS student_id, s.full_name AS full_name, sp.paid AS paid, sp.payment_month AS date "
             "FROM student_classes sc "
             "JOIN students s ON sc.student_id = s.student_id "
-            "LEFT JOIN package_classes pc ON sc.class_id = pc.class_id "
-            "LEFT JOIN student_monthly_package_payments sp ON sp.package_id = pc.package_id AND sp.student_id = sc.student_id "
+            "LEFT JOIN classes c ON sc.class_id = c.class_id "
+            "LEFT JOIN student_monthly_package_payments sp ON sp.package_id = c.package_id AND sp.student_id = sc.student_id "
             "WHERE sc.class_id = %s",
             (class_id,),
         )
@@ -347,9 +338,9 @@ class Model:
             FROM attendance a
             JOIN student_classes sc ON a.student_class_id = sc.student_class_id
             JOIN students s ON sc.student_id = s.student_id
-            LEFT JOIN package_classes pc ON sc.class_id = pc.class_id
+            LEFT JOIN classes c ON sc.class_id = c.class_id
             LEFT JOIN student_monthly_package_payments sp 
-                ON sp.package_id = pc.package_id 
+                ON sp.package_id = c.package_id 
                 AND sp.student_id = sc.student_id 
                 AND YEAR(sp.payment_month) = %s 
                 AND MONTH(sp.payment_month) = %s
@@ -404,7 +395,7 @@ class Model:
         for student in students:
             # Get the `student_class_id` for the student and class
             dbcursor.execute(
-                "SELECT package_id FROM package_classes WHERE class_id = %s",
+                "SELECT package_id FROM classes WHERE class_id = %s",
                 (class_id,),
             )
             package_id = dbcursor.fetchone()["package_id"]

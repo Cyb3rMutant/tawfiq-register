@@ -540,27 +540,3 @@ def process_file(file, fields_names):
 
 
 app.run(debug=True, host="0.0.0.0")
-
-x = [
-    {
-        "date": datetime.datetime(2025, 1, 4, 0, 0),
-        "records": [
-            {
-                "full_name": "yazeed",
-                "fields": [
-                    {"field_id": "attendance", "field_value": "yes"},
-                    {"field_id": 1, "field_value": "done"},
-                    {"field_id": 2, "field_value": "bad"},
-                ],
-            },
-            {
-                "full_name": "amin",
-                "fields": [
-                    {"field_id": "attendance", "field_value": "yes"},
-                    {"field_id": 1, "field_value": "not done"},
-                    {"field_id": 2, "field_value": "bad"},
-                ],
-            },
-        ],
-    },
-]

@@ -25,14 +25,26 @@ INSERT INTO students (full_name, age, gender, phone_number, payer_id) VALUES
   ("Hamza Abu-Hummos", 20, "Male", "7742903241", 1),
   ("umar", 20, "Male", "0795685407", 2);
 
+-- Define packages and their prices
+CREATE TABLE packages (
+    package_id INT AUTO_INCREMENT PRIMARY KEY,
+    package_name VARCHAR(255) NOT NULL,
+    price INT NOT NULL
+);
+
+INSERT INTO packages ( package_name, price) VALUES
+  ("big packcage", 20),
+  ("small package", 5);
+
 -- Create `classes` table
 CREATE TABLE classes (
     class_id INT AUTO_INCREMENT PRIMARY KEY,
+    package_id INT NOT NULL,
     class_name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
     days_of_week CHAR(7) NOT NULL,
-    time_of_day TIME NOT NULL
+    time_of_day TIME NOT NULL,
+    FOREIGN KEY(package_id) REFERENCES packages(package_id)
 );
-
 
 -- Create `teachers` table
 CREATE TABLE teachers (
@@ -53,7 +65,6 @@ CREATE TABLE teacher_classes (
     FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id) ON DELETE CASCADE,
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE
 );
-
 
 -- Create `student_classes` table (many-to-many relationship)
 CREATE TABLE student_classes (
@@ -102,26 +113,6 @@ CREATE TABLE attendance_fields (
     FOREIGN KEY (class_field_id) REFERENCES class_fields(class_field_id) ON DELETE CASCADE
 );
 
--- Define packages and their prices
-CREATE TABLE packages (
-    package_id INT AUTO_INCREMENT PRIMARY KEY,
-    package_name VARCHAR(255) NOT NULL,
-    price INT NOT NULL
-);
-
-INSERT INTO packages ( package_name, price) VALUES
-  ("big packcage", 20),
-  ("small package", 5);
-
--- Link packages to classes
-CREATE TABLE package_classes (
-    student_class_id INT AUTO_INCREMENT PRIMARY KEY,
-    package_id INT NOT NULL,
-    class_id INT NOT NULL,
-    FOREIGN KEY (package_id) REFERENCES packages(package_id),
-    FOREIGN KEY (class_id) REFERENCES classes(class_id)
-);
-
 CREATE TABLE student_monthly_package_payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
@@ -131,4 +122,3 @@ CREATE TABLE student_monthly_package_payments (
     FOREIGN KEY (student_id) REFERENCES students(student_id),
     FOREIGN KEY (package_id) REFERENCES packages(package_id)
 );
-
