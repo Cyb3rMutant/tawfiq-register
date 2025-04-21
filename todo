@@ -1,2 +1,24 @@
 in the assign students page, check if student is already assigned to class and make it checked if so
 when you assign a student to a class after the init_month has been initialized, that student doesn't exist in the payments
+
+
+- add students
+- assign them
+- mark attendance
+- mark attendance side by side
+- mark payment accross classes
+- views
+
+- payments marking as table
+
+- have one class run multiple times per day
+
+admins init attendance on demand only
+
+payments is for the parents and parents can have multiple kids, and payment shouldn't be on attendance view
+
+a view for package payment with all students in the package
+
+graphic stats
+
+policies and logins

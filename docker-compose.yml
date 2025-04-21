@@ -1,17 +1,17 @@
 services:
-  register:
-    image: register
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "5000:5000"
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-    entrypoint: ["./entrypoint.sh"]
+  # register:
+  #   image: register
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5000:5000"
+  #   volumes:
+  #     - .:/app
+  #   depends_on:
+  #     - db
+  #   entrypoint: ["./entrypoint.sh"]
   # "db" service
   db:
     # Name of the image to be pulled from Docker Hub.

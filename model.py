@@ -7,8 +7,8 @@ class Model:
 
     def __init__(self):
         self.__conn = mysql.connector.connect(
-            # host="localhost",
-            host="db",
+            host="localhost",
+            # host="db",
             user="root",
             password="p",
             database="register",
@@ -21,6 +21,13 @@ class Model:
         dbcursor.close()
         return data
 
+    def get_payers(self):
+        dbcursor = self.__conn.cursor(dictionary=True)
+        dbcursor.execute("SELECT * FROM payers")
+        data = dbcursor.fetchall()
+        dbcursor.close()
+        return data
+
     def get_students(self):
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute("SELECT * FROM students")
@@ -28,26 +35,33 @@ class Model:
         dbcursor.close()
         return data
 
-    def add_student(
-        self, full_name, age, gender, phone_number, classes, special_requirements=""
-    ):
+    def add_payer(self, full_name, phone_number):
+        dbcursor = self.__conn.cursor(dictionary=True)
+
+        # Insert the class with schedule details
+        dbcursor.execute(
+            "INSERT INTO packages (full_name, phone_number) VALUES (%s, %s)",
+            (full_name, phone_number),
+        )
+        id = dbcursor.lastrowid
+
+        self.__conn.commit()
+        dbcursor.close()
+        return id
+
+    def add_student(self, full_name, age, gender, phone_number, classes, payer_id):
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute(
-            "INSERT INTO students (full_name, age, gender, phone_number) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO students (full_name, age, gender, phone_number, payer_id) VALUES (%s, %s, %s, %s, %s)",
             (
                 full_name,
                 age,
                 gender,
                 phone_number,
+                payer_id,
             ),
         )
         new_student_id = dbcursor.lastrowid
-
-        if special_requirements:
-            dbcursor.execute(
-                "INSERT INTO special_requirements (student_id, requirement) VALUES (%s, %s)",
-                (new_student_id, special_requirements),
-            )
 
         for class_id in classes:
             dbcursor.execute(
@@ -91,6 +105,13 @@ class Model:
         dbcursor.close()
         return data
 
+    def get_teacher(self, name=None):
+        dbcursor = self.__conn.cursor(dictionary=True)
+        dbcursor.execute("SELECT * FROM teachers WHERE teacher_name = %s", (name,))
+        data = dbcursor.fetchone()
+        dbcursor.close()
+        return data
+
     def add_teacher(self, teacher_name, phone_number):
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute(
@@ -116,6 +137,18 @@ class Model:
     def get_classes(self):
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute("SELECT * FROM classes")
+        data = dbcursor.fetchall()
+        dbcursor.close()
+        return data
+
+    def get_teacher_classes(self, teacher_id):
+        dbcursor = self.__conn.cursor(dictionary=True)
+        dbcursor.execute(
+            "SELECT c.class_id, c.class_name, c.days_of_week, c.time_of_day \
+             FROM teacher_classes tc JOIN classes c ON tc.class_id = c.class_id \
+             WHERE tc.teacher_id = %s",
+            (teacher_id,),
+        )
         data = dbcursor.fetchall()
         dbcursor.close()
         return data
@@ -229,11 +262,12 @@ class Model:
         dbcursor = self.__conn.cursor(dictionary=True)
 
         dbcursor.execute(
-            "SELECT sc.student_id AS student_id, s.full_name AS full_name, sp.paid AS paid, sp.payment_month AS date "
+            "SELECT sc.student_id AS student_id, s.full_name AS full_name, sp.paid AS paid, sp.payment_month AS date, p.full_name AS payer_name, p.phone_number AS payer_phone_number "
             "FROM student_classes sc "
             "JOIN students s ON sc.student_id = s.student_id "
             "LEFT JOIN package_classes pc ON sc.class_id = pc.class_id "
             "LEFT JOIN student_monthly_package_payments sp ON sp.package_id = pc.package_id AND sp.student_id = sc.student_id "
+            "LEFT JOIN payers p ON s.payer_id = p.payer_id "
             "WHERE sc.class_id = %s AND sp.payment_month BETWEEN %s AND %s",
             (class_id, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")),
         )

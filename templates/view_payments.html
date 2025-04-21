@@ -11,6 +11,7 @@ content %}
 <table>
   <thead>
     <tr>
+      <th>Payer</th>
       <th>Name / Date</th>
       {% for d in dates %}
       <th>{{ d }}</th>
@@ -20,6 +21,7 @@ content %}
   <tbody>
     {% for name in names %}
     <tr>
+      <td>{{ student_payer.get(name) }}</td>
       <td>{{ name }}</td>
       {% for d in dates %}
       <td>{{ lookup.get((name, d), 'N/A') }}</td>

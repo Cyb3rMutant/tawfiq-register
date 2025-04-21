@@ -1,33 +1,29 @@
--- Create `students` table
-CREATE TABLE students (
-    student_id INT AUTO_INCREMENT PRIMARY KEY,
+-- Create `payers` table
+CREATE TABLE payers (
+    payer_id INT AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-    age INT NOT NULL,
-    gender ENUM('Male', 'Female') NOT NULL,
     phone_number VARCHAR(15) NOT NULL
 );
 
-INSERT INTO students (full_name, age, gender, phone_number) VALUES
-  ("Yazeed Abu-Hummos", 22, "Male", "7742903241"),
-  ("umar", 20, "Male", "0795685407");
+INSERT INTO payers (full_name, phone_number) VALUES
+  ("Muawiya Abu-Hummos", "00962795685407"),
+  ("umar", "0795685407");
 
--- Create `emergency_contacts` table
-CREATE TABLE emergency_contacts (
-    contact_id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id INT NOT NULL,
-    contact_name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-    contact_phone_number VARCHAR(15) NOT NULL,
-    relationship VARCHAR(50) NOT NULL,
-    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
+-- Create `students` table
+CREATE TABLE students (
+    student_id INT AUTO_INCREMENT PRIMARY KEY,
+    payer_id INT NOT NULL,
+    full_name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    age INT NOT NULL,
+    gender ENUM('Male', 'Female') NOT NULL,
+    phone_number VARCHAR(15) NOT NULL,
+    FOREIGN KEY (payer_id) REFERENCES payers(payer_id)
 );
 
--- Create `special_requirements` table
-CREATE TABLE special_requirements (
-    requirement_id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id INT NOT NULL,
-    requirement TEXT NOT NULL,
-    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
-);
+INSERT INTO students (full_name, age, gender, phone_number, payer_id) VALUES
+  ("Yazeed Abu-Hummos", 22, "Male", "7742903241", 1),
+  ("Hamza Abu-Hummos", 20, "Male", "7742903241", 1),
+  ("umar", 20, "Male", "0795685407", 2);
 
 -- Create `classes` table
 CREATE TABLE classes (
@@ -46,8 +42,8 @@ CREATE TABLE teachers (
 );
 
 INSERT INTO teachers (teacher_name, phone_number) VALUES 
-  ("Ustadh Anas Abdelsami", "2093493247"),
-  ("Sheikh Abu-Thaabit", "2093493247");
+  ("anas", "2093493247"),
+  ("Sheikh Sheikh Mukhtar AbdurRahman", "2093493247");
 
 -- Create `teacher_classes` table (many-to-many relationship)
 CREATE TABLE teacher_classes (

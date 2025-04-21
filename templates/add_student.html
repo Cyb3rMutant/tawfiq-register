@@ -21,6 +21,25 @@ content %}
   <label for="phone_number">Phone Number:</label>
   <input type="tel" id="phone_number" name="phone_number" required /><br /><br />
 
+  <!-- Select Payer or Add New -->
+  <label for="payer_ids">Payer:</label><br />
+  <input type="radio" id="new_payer" name="payer_ids" value="-1" />
+  <label for="new_payer">new payer</label><br />
+  <input type="radio" id="self_payer" name="payer_ids" value="0" />
+  <label for="self_payer">will pay themselves</label><br />
+
+  {% for payer in payers %}
+  <input type="radio" id="payer_{{ payer.payer_id }}" name="payer_ids" value="{{ payer.payer_id }}" />
+  <label for="payer_{{ payer.payer_id }}">{{ payer.full_name }}</label><br />
+  {% endfor %}
+
+  <!-- New Payer Option (hidden by default) -->
+  <div id="new-payer-fields" style="display:none;">
+  <label for="new_payer" >Add New Payer:</label><br />
+  <input type="text" id="new_payer_name" name="new_payer_name" placeholder="Payer Full Name" /><br />
+  <input type="tel" id="new_payer_phone" name="new_payer_phone" placeholder="Payer Phone Number" /><br /><br />
+  </div>
+
   <!-- Classes -->
   <label for="classes">Classes:</label>
   <select id="classes" name="classes" multiple required>
@@ -33,12 +52,19 @@ content %}
 
   <small>Hold Ctrl (Cmd on Mac) to select multiple classes.</small><br /><br />
 
-  <!-- Special Requirements -->
-  <label for="special_requirements">Special Requirements or Allergies:</label>
-  <textarea id="special_requirements" name="special_requirements" rows="4" cols="50"
-    placeholder="Optional"></textarea><br /><br />
-
   <!-- Submit Button -->
   <button type="submit">Add Student</button>
 </form>
+<script>
+  // Toggle the visibility of the new payer fields based on the selection
+  document.querySelectorAll('input[name="payer_ids"]').forEach(function(payerRadio) {
+    payerRadio.addEventListener("change", function() {
+      if (this.value === "-1") {
+        document.getElementById("new-payer-fields").style.display = "block";
+      } else {
+        document.getElementById("new-payer-fields").style.display = "none";
+      }
+    });
+  });
+</script>
 {% endblock %}

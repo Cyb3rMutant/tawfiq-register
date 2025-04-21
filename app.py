@@ -1,12 +1,4 @@
-import re
-from flask import (
-    Flask,
-    json,
-    request,
-    render_template,
-    url_for,
-    redirect,
-)
+from flask import Flask, json, request, render_template, url_for, redirect, session
 from model import model
 from datetime import datetime, timedelta
 import io
@@ -22,26 +14,55 @@ server_last_update_time = datetime.now()
 
 @app.route("/")
 def index():
-    classes = model.get_classes()
+    if "teacher_id" not in session:
+        return redirect(url_for("login"))
+
+    classes = model.get_teacher_classes(teacher_id=session.get("teacher_id"))
     return render_template("index.html", classes=classes)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method != "POST":
+        return render_template("login.html")
+
+    username = request.form["username"]
+    user = model.get_teacher(username)
+    print(user)
+    if not user:
+        return render_template("login.html", message="user doesn't exist")
+
+    session["teacher_id"] = user["teacher_id"]
+
+    return redirect(url_for("index"))  # Redirect after adding the class
 
 
 @app.route("/add_student", methods=["GET", "POST"])
 def add_student():
     if request.method != "POST":
+        payers = model.get_payers()
         classes = model.get_classes()
-        return render_template("add_student.html", classes=classes)
+        return render_template("add_student.html", classes=classes, payers=payers)
 
-    full_name: str = request.form["full_name"]
+    full_name = request.form["full_name"]
     age = int(request.form["age"])
     gender = request.form["gender"]
     phone_number = request.form["phone_number"]
     classes = request.form.getlist("classes")
-    special_requirements = request.form.get("special_requirements", "")
 
-    model.add_student(
-        full_name, age, gender, phone_number, classes, special_requirements
-    )
+    # Handle payer selection or new payer creation
+    payer_id = request.form["payer_ids"]
+    if payer_id == "-1":  # New payer creation
+        new_payer_name = request.form["new_payer_name"]
+        new_payer_phone = request.form["new_payer_phone"]
+        payer_id = model.add_payer(
+            new_payer_name, new_payer_phone
+        )  # Function to insert new payer
+    elif payer_id == "0":
+        payer_id = model.add_payer(full_name, phone_number)
+
+    # Add student and associate with payer
+    model.add_student(full_name, age, gender, phone_number, classes, payer_id)
 
     return redirect(url_for("index"))
 
@@ -380,6 +401,11 @@ def view_payments(class_id):
     # Build a lookup dictionary for quick access
     lookup = {(item["full_name"], item["date"]): item["paid"] for item in payments}
 
+    student_payer = {
+        item["full_name"]: {item["payer_name"], item["payer_phone_number"]}
+        for item in payments
+    }
+
     # Calculate previous and next start dates
     prev_start_date = (start_date - timedelta(days=90)).strftime("%Y-%m-%d")
     next_start_date = (start_date + timedelta(days=90)).strftime("%Y-%m-%d")
@@ -389,6 +415,7 @@ def view_payments(class_id):
         names=names,
         dates=dates,
         lookup=lookup,
+        student_payer=student_payer,
         class_data=class_data,
         prev_start_date=prev_start_date,
         next_start_date=next_start_date,
