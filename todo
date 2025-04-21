@@ -15,10 +15,6 @@ when you assign a student to a class after the init_month has been initialized, 
 
 admins init attendance on demand only
 
-payments is for the parents and parents can have multiple kids, and payment shouldn't be on attendance view
-
-a view for package payment with all students in the package
-
 graphic stats
 
 policies and logins

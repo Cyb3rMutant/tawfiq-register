@@ -40,7 +40,7 @@ class Model:
 
         # Insert the class with schedule details
         dbcursor.execute(
-            "INSERT INTO packages (full_name, phone_number) VALUES (%s, %s)",
+            "INSERT INTO payers (full_name, phone_number) VALUES (%s, %s)",
             (full_name, phone_number),
         )
         id = dbcursor.lastrowid
@@ -248,6 +248,28 @@ class Model:
         dbcursor.close()
 
         return students
+
+    def get_package_payments_in_date_range(self, package_id, start_date, end_date):
+        dbcursor = self.__conn.cursor(dictionary=True)
+
+        dbcursor.execute(
+            "SELECT sp.student_id AS student_id, s.full_name AS full_name, sp.paid AS paid, sp.payment_month AS date, "
+            "p.full_name AS payer_name, p.phone_number AS payer_phone_number "
+            "FROM student_monthly_package_payments sp "
+            "JOIN students s ON sp.student_id = s.student_id "
+            "LEFT JOIN payers p ON s.payer_id = p.payer_id "
+            "WHERE sp.package_id = %s AND sp.payment_month BETWEEN %s AND %s",
+            (
+                package_id,
+                start_date.strftime("%Y-%m-%d"),
+                end_date.strftime("%Y-%m-%d"),
+            ),
+        )
+
+        records = dbcursor.fetchall()
+        dbcursor.close()
+
+        return records
 
     def get_class_payments_in_date_range(self, class_id, start_date, end_date):
         dbcursor = self.__conn.cursor(dictionary=True)

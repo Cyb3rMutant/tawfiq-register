@@ -423,6 +423,53 @@ def view_payments(class_id):
     )
 
 
+@app.route("/view_package_payments/<int:package_id>")
+def view_package_payments(package_id):
+    # Get the start_date from the query string or default to the current date
+    start_date_str = request.args.get("start_date", None)
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+    else:
+        start_date = datetime.today().replace(day=1)  # First day of the current month
+
+    # Calculate the end_date (3 months from start_date)
+    end_date = start_date + timedelta(days=90)  # Approx. 3 months
+
+    # Fetch package data and payments filtered by date range
+    package_data = model.get_package(package_id)
+    payments = model.get_package_payments_in_date_range(
+        package_id, start_date, end_date
+    )
+
+    # Extract unique names and dates within the range
+    names = sorted(set(item["full_name"] for item in payments))
+    dates = sorted(set(item["date"] for item in payments))
+
+    # Build a lookup dictionary for quick access
+    lookup = {(item["full_name"], item["date"]): item["paid"] for item in payments}
+
+    student_payer = {
+        item["full_name"]: {item["payer_name"], item["payer_phone_number"]}
+        for item in payments
+    }
+
+    # Calculate previous and next start dates
+    prev_start_date = (start_date - timedelta(days=90)).strftime("%Y-%m-%d")
+    next_start_date = (start_date + timedelta(days=90)).strftime("%Y-%m-%d")
+
+    return render_template(
+        "view_package_payments.html",
+        names=names,
+        dates=dates,
+        lookup=lookup,
+        student_payer=student_payer,
+        package_data=package_data,
+        prev_start_date=prev_start_date,
+        next_start_date=next_start_date,
+        current_period=f"{start_date.strftime('%b %Y')} - {end_date.strftime('%b %Y')}",
+    )
+
+
 # Route to handle file upload
 @app.route("/load_attendance", methods=["POST", "GET"])
 def load_attendance():

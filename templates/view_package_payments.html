@@ -1,12 +1,13 @@
 {% extends "base.html" %} {% block title %}View payments{% endblock %} {% block
 content %}
 <link href="{{ url_for('static', filename='views/style.css') }}" rel="stylesheet" />
-<h1>Payments for the {{ class_data.class_name }} class</h1>
+<h1>Payments for the {{ package_data.package_name }} package</h1>
 <p>Viewing: {{ current_period }}</p>
 <div>
-  <a href="{{ url_for('view_payments', class_id=class_data.class_id, start_date=prev_start_date) }}">Previous 3
-    Months</a>
-  <a href="{{ url_for('view_payments', class_id=class_data.class_id, start_date=next_start_date) }}">Next 3 Months</a>
+  <a href="{{ url_for('view_package_payments', package_id=package_data.package_id, start_date=prev_start_date) }}">Previous
+    3 Months</a>
+  <a href="{{ url_for('view_package_payments', package_id=package_data.package_id, start_date=next_start_date) }}">Next
+    3 Months</a>
 </div>
 <table>
   <thead>
@@ -32,4 +33,3 @@ content %}
 </table>
 
 {% endblock %}
-
