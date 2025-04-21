@@ -9,8 +9,6 @@ when you assign a student to a class after the init_month has been initialized, 
 - mark payment accross classes
 - views
 
-- payments marking as table
-
 - have one class run multiple times per day
 
 admins init attendance on demand only

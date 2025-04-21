@@ -168,12 +168,11 @@ class Model:
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute(
             """
-            SELECT s.full_name AS student_name, p.package_name AS package_name, p.price AS price, smpp.paid AS paid 
+            SELECT s.full_name AS full_name, smpp.paid AS paid, smpp.payment_id AS payment_id
             FROM student_classes sc
             JOIN students s ON sc.student_id = s.student_id
             JOIN classes c ON sc.class_id = c.class_id
-            JOIN packages p ON c.package_id = p.package_id
-            JOIN student_monthly_package_payments smpp ON smpp.student_id = s.student_id AND smpp.package_id = p.package_id AND smpp.payment_month = %s
+            JOIN student_monthly_package_payments smpp ON smpp.student_id = s.student_id AND smpp.package_id = c.package_id AND smpp.payment_month = %s
             WHERE sc.class_id = %s;
             """,
             (payment_month, class_id),
@@ -511,33 +510,6 @@ class Model:
                 "UPDATE attendance_fields SET field_value = %s WHERE attendance_field_id = %s",
                 (json.dumps(value), field_id),
             )
-        self.__conn.commit()
-        dbcursor.close()
-
-    def mark_attendance(self, attendance_vals, payment_vals, field_vals):
-        """
-        attendance_records: List of dictionaries in the format:
-        [{'student_id': 1, 'status': 'Present', 'notes': 'On time'}, ...]
-        """
-        dbcursor = self.__conn.cursor(dictionary=True)
-
-        for id, val in attendance_vals.items():
-            dbcursor.execute(
-                "UPDATE attendance SET status = %s WHERE attendance_id = %s",
-                (val, id),
-            )
-        for id, val in payment_vals.items():
-            dbcursor.execute(
-                "UPDATE student_monthly_package_payments SET paid = %s WHERE payment_id = %s",
-                (val, id),
-            )
-
-        for id, val in field_vals.items():
-            dbcursor.execute(
-                "UPDATE attendance_fields SET field_value = %s WHERE attendance_field_id = %s",
-                (json.dumps(val), id),
-            )
-
         self.__conn.commit()
         dbcursor.close()
 

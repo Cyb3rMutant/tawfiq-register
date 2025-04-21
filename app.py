@@ -225,7 +225,20 @@ def decode_days_binary(binary_string):
     return selected_days
 
 
-@app.route("/mark_attendance/<int:class_id>", methods=["GET", "POST"])
+@app.route("/mark_payments/<int:class_id>")
+def mark_payments(class_id):
+    attendance_date = datetime.now()
+    payments = model.get_class_payments(class_id, attendance_date)
+    if not payments:
+        model.init_payment_month(class_id, attendance_date)
+        payments = model.get_class_payments(class_id, attendance_date)
+    class_data = model.get_class(class_id)
+    return render_template(
+        "mark_payments.html", payments=payments, class_data=class_data
+    )
+
+
+@app.route("/mark_attendance/<int:class_id>")
 def mark_attendance(class_id):
     # Get the current date and day of the week
     attendance_date = datetime.now()
@@ -252,40 +265,9 @@ def mark_attendance(class_id):
         model.init_attendance_day(class_id, attendance_date)
         attendance = model.get_attendance(class_id, attendance_date)
 
-    print(attendance)
-    if request.method != "POST":
-        return render_template(
-            "mark_attendance.html", attendance=attendance, class_data=class_data
-        )
-
-    # note just collect attendance separatly then payments separatly then fields separatly since they have their own ids no need to be bound to student id
-    attendance_vals = {}
-    payment_vals = {}
-    field_vals = {}
-
-    for data in attendance:
-        attendance_vals[data["attendance_id"]] = request.form[
-            "student_{}".format(data["attendance_id"])
-        ]
-        payment_vals[data["payment_id"]] = int(
-            request.form.get("paid_{}".format(data["payment_id"]), "off") == "on"
-        )
-
-        for field in data["fields"]:
-
-            field_values = request.form.getlist(
-                "field_{}".format(field["attendance_field_id"])
-            )  # Handles checkbox
-            # Convert values to integers if possible
-            try:
-                field_values = [int(v) for v in field_values]
-            except ValueError:
-                pass  # Keep them as strings if conversion fails
-            field_vals[field["attendance_field_id"]] = field_values
-
-    print(attendance_vals, payment_vals, field_vals)
-    model.mark_attendance(attendance_vals, payment_vals, field_vals)
-    return redirect(url_for("index"))  # Redirect after adding the class
+    return render_template(
+        "mark_attendance.html", attendance=attendance, class_data=class_data
+    )
 
 
 from datetime import datetime, timedelta

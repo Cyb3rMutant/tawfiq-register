@@ -1,0 +1,109 @@
+{% extends "base.html" %} {% block title %}Mark payments{% endblock %} {%
+block content %}
+<h1>Mark payments for the {{ class_data.class_name }} class</h1>
+<form action="/mark_payments/{{ class_data.class_id }}" method="POST">
+  <table>
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Paid</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for data in payments %}
+      <tr>
+        <td>{{ data.full_name }}</td>
+        <td>
+          <input type="checkbox" id="paid_{{ data.payment_id }}" name="paid_{{ data.payment_id }}" {% if data.paid %}checked{% endif %} />
+          <label for="paid_{{ data.payment_id }}">Paid</label>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
+
+<script>
+  let lastUpdateTime = new Date(0, 0, 0);
+
+  function updateAttendance(fieldId, field, value) {
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+      if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+        console.log("Attendance updated:", xmlhttp.responseText);
+      }
+    };
+    xmlhttp.open(
+      "GET",
+      `/ajax_server?field_id=${fieldId}&field=${field}&value=${encodeURIComponent(
+        value,
+      )}`,
+      true,
+    );
+    xmlhttp.send();
+  }
+
+  function setupEventListeners() {
+    document.querySelectorAll("input[type='checkbox']").forEach((checkbox) => {
+      checkbox.addEventListener("change", (event) => {
+        const paymentId = event.target.id.split("_")[1];
+        const value = event.target.checked ? "1" : "0";
+        updateAttendance(paymentId, "paid", value);
+      });
+    });
+  }
+
+  function pollServerForUpdates() {
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+      if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+        try {
+          // const updates = JSON.parse(xmlhttp.responseText);
+          const updates = JSON.parse(xmlhttp.responseText);
+          console.log(updates, typeof updates);
+          if (updates.length) {
+            lastUpdateTime = new Date();
+            applyUpdates(updates);
+          }
+        } catch (e) {
+          console.error("Error parsing server response:", e);
+        }
+      }
+    };
+    var datetime =
+      lastUpdateTime.getDate() +
+      "/" +
+      (lastUpdateTime.getMonth() + 1) +
+      "/" +
+      lastUpdateTime.getFullYear() +
+      " " +
+      lastUpdateTime.getHours() +
+      ":" +
+      lastUpdateTime.getMinutes() +
+      ":" +
+      lastUpdateTime.getSeconds();
+    xmlhttp.open(
+      "GET",
+      `/ajax_poll?class_id={{ class_data.class_id }}&value=${encodeURIComponent(
+        datetime,
+      )}`,
+      true,
+    ); // Adjust endpoint as needed
+    xmlhttp.send();
+  }
+
+  function applyUpdates(attendanceData) {
+    attendanceData.forEach((student) => {
+      // Set the paid checkbox
+      document.getElementById(`paid_${student.payment_id}`).checked = Boolean(
+        student.paid,
+      );
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setupEventListeners();
+    setInterval(pollServerForUpdates, 1000); // Poll the server every 3 seconds
+  });
+</script>
+{% endblock %}
