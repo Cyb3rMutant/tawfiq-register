@@ -14,6 +14,13 @@ class Model:
             database="register",
         )
 
+    def get_days_of_week(self):
+        dbcursor = self.__conn.cursor(dictionary=True)
+        dbcursor.execute("SELECT * FROM days_of_week")
+        data = dbcursor.fetchall()
+        dbcursor.close()
+        return data
+
     def get_field_types(self):
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute("SELECT * FROM field_types")
@@ -141,21 +148,106 @@ class Model:
         dbcursor.close()
         return data
 
+    def get_classes_with_time(self):
+        dbcursor = self.__conn.cursor(dictionary=True)
+
+        dbcursor.execute(
+            """
+            SELECT c.class_id, c.class_name
+            FROM teacher_classes tc
+            JOIN classes c ON tc.class_id = c.class_id
+            """
+        )
+        classes = dbcursor.fetchall()
+
+        for cls in classes:
+            dbcursor.execute(
+                """
+                SELECT 
+                    ct.class_time_id,
+                    d.day_name,
+                    ct.time,
+                    cs.session_id
+                FROM class_times ct
+                JOIN days_of_week d ON ct.day_id = d.day_id
+                LEFT JOIN class_sessions cs ON cs.class_time_id = ct.class_time_id
+                    AND cs.session_date >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) + 1 DAY)
+                    AND cs.session_date <= CURDATE()
+                WHERE ct.class_id = %s
+                ORDER BY d.day_id, ct.time
+                """,
+                (cls["class_id"],),
+            )
+            cls["schedule"] = dbcursor.fetchall()
+
+        dbcursor.close()
+        return classes
+
     def get_teacher_classes(self, teacher_id):
         dbcursor = self.__conn.cursor(dictionary=True)
+
         dbcursor.execute(
-            "SELECT c.class_id, c.class_name, c.days_of_week, c.time_of_day \
-             FROM teacher_classes tc JOIN classes c ON tc.class_id = c.class_id \
-             WHERE tc.teacher_id = %s",
+            """
+            SELECT c.class_id, c.class_name
+            FROM teacher_classes tc
+            JOIN classes c ON tc.class_id = c.class_id
+            WHERE tc.teacher_id = %s
+            """,
             (teacher_id,),
         )
-        data = dbcursor.fetchall()
+        classes = dbcursor.fetchall()
+
+        for cls in classes:
+            dbcursor.execute(
+                """
+                SELECT 
+                    ct.class_time_id,
+                    d.day_name,
+                    ct.time,
+                    cs.session_id
+                FROM class_times ct
+                JOIN days_of_week d ON ct.day_id = d.day_id
+                LEFT JOIN class_sessions cs ON cs.class_time_id = ct.class_time_id
+                    AND cs.session_date >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) + 1 DAY)
+                    AND cs.session_date <= CURDATE()
+                WHERE ct.class_id = %s
+                ORDER BY d.day_id, ct.time
+                """,
+                (cls["class_id"],),
+            )
+            cls["schedule"] = dbcursor.fetchall()
+
         dbcursor.close()
-        return data
+        return classes
 
     def get_class(self, class_id):
         dbcursor = self.__conn.cursor(dictionary=True)
         dbcursor.execute("SELECT * FROM classes WHERE class_id = %s", (class_id,))
+        data = dbcursor.fetchone()
+        dbcursor.close()
+        return data
+
+    def get_class_from_class_time(self, class_time_id):
+        dbcursor = self.__conn.cursor(dictionary=True)
+        dbcursor.execute(
+            "SELECT c.* FROM classes c LEFT JOIN "
+            "class_times ct ON c.class_id = ct.class_id "
+            "WHERE class_time_id = %s",
+            (class_time_id,),
+        )
+        data = dbcursor.fetchone()
+        dbcursor.close()
+        return data
+
+    def get_class_from_session(self, session_id):
+        dbcursor = self.__conn.cursor(dictionary=True)
+        dbcursor.execute(
+            "SELECT c.*, cs.session_id FROM classes c "
+            "LEFT JOIN class_times ct ON c.class_id = ct.class_id "
+            "LEFT JOIN class_sessions cs ON cs.class_time_id = ct.class_time_id "
+            "WHERE cs.session_id = %s",
+            (session_id,),
+        )
         data = dbcursor.fetchone()
         dbcursor.close()
         return data
@@ -182,25 +274,23 @@ class Model:
         dbcursor.close()
         return data
 
-    def add_class(
-        self, class_name, teacher_ids, package_id, days_of_week, time_of_day, fields
-    ):
+    def add_class(self, class_name, teacher_ids, package_id, days_and_times, fields):
         dbcursor = self.__conn.cursor(dictionary=True)
 
         # Insert the class with schedule details
         dbcursor.execute(
-            "INSERT INTO classes (class_name, days_of_week, time_of_day, package_id) VALUES (%s, %s, %s, %s)",
-            (class_name, days_of_week, time_of_day, package_id),
+            "INSERT INTO classes (class_name, package_id) VALUES (%s, %s)",
+            (class_name, package_id),
         )
         new_class_id = dbcursor.lastrowid
-        for field in fields:
-            print(
-                field,
-                new_class_id,
-                field["field_type_id"],
-                field["field_name"],
-                field["defaultValues"],
+
+        for day, time in days_and_times:
+            dbcursor.execute(
+                "INSERT INTO class_times (class_id, day_id, time) VALUES (%s, %s, %s)",
+                (new_class_id, day, time),
             )
+
+        for field in fields:
             dbcursor.execute(
                 "INSERT INTO class_fields (class_id, field_type_id, field_name, field_defaults) VALUES (%s, %s, %s, %s)",
                 (
@@ -309,11 +399,12 @@ class Model:
         dbcursor = self.__conn.cursor(dictionary=True)
 
         dbcursor.execute(
-            "SELECT a.attendance_id, sc.student_id AS student_id, s.full_name AS full_name, a.status AS status, a.attendance_date AS date "
+            "SELECT a.attendance_id, a.student_id AS student_id, s.full_name AS full_name, a.status AS status, cs.session_date AS date "
             "FROM attendance a "
-            "JOIN student_classes sc ON a.student_class_id = sc.student_class_id "
-            "JOIN students s ON sc.student_id = s.student_id "
-            "WHERE sc.class_id = %s AND a.attendance_date BETWEEN %s AND %s "
+            "JOIN students s ON a.student_id = s.student_id "
+            "JOIN class_sessions cs ON a.session_id = cs.session_id "
+            "JOIN class_times ct ON cs.class_time_id = ct.class_time_id "
+            "WHERE ct.class_id = %s AND cs.session_date BETWEEN %s AND %s "
             "ORDER BY date ASC",
             (class_id, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")),
         )
@@ -344,36 +435,33 @@ class Model:
 
         return records
 
-    def get_attendance(self, class_id, attendance_date):
+    def get_attendance(self, session_id):
 
         dbcursor = self.__conn.cursor(dictionary=True)
 
         # Fetch attendance records
         dbcursor.execute(
             """
-            SELECT s.full_name AS full_name, 
-                   a.attendance_id AS attendance_id, 
-                   a.status AS status, 
+            SELECT s.full_name AS full_name,
+                   a.attendance_id AS attendance_id,
+                   a.status AS status,
                    sp.payment_id AS payment_id,
-                   sp.paid AS paid
+                   sp.paid AS paid,
+                   ct.class_id AS class_id,
+                   cs.session_id AS session_id
             FROM attendance a
-            JOIN student_classes sc ON a.student_class_id = sc.student_class_id
-            JOIN students s ON sc.student_id = s.student_id
-            LEFT JOIN classes c ON sc.class_id = c.class_id
+            JOIN students s ON a.student_id = s.student_id
+            JOIN class_sessions cs ON a.session_id = cs.session_id
+            JOIN class_times ct ON cs.class_time_id = ct.class_time_id
+            LEFT JOIN classes c ON ct.class_id = c.class_id
             LEFT JOIN student_monthly_package_payments sp 
                 ON sp.package_id = c.package_id 
-                AND sp.student_id = sc.student_id 
-                AND YEAR(sp.payment_month) = %s 
-                AND MONTH(sp.payment_month) = %s
-            WHERE sc.class_id = %s 
-              AND a.attendance_date = %s
+                AND sp.student_id = s.student_id 
+                AND YEAR(sp.payment_month) = YEAR(cs.session_date)
+                AND MONTH(sp.payment_month) = MONTH(cs.session_date)
+            WHERE a.session_id = %s
             """,
-            (
-                attendance_date.year,
-                attendance_date.month,
-                class_id,
-                attendance_date.strftime("%Y-%m-%d"),
-            ),
+            (session_id,),
         )
 
         attendance_records = dbcursor.fetchall()
@@ -414,7 +502,6 @@ class Model:
         students = self.get_class_students(class_id)
 
         for student in students:
-            # Get the `student_class_id` for the student and class
             dbcursor.execute(
                 "SELECT package_id FROM classes WHERE class_id = %s",
                 (class_id,),
@@ -430,11 +517,21 @@ class Model:
         self.__conn.commit()
         dbcursor.close()
 
-    def init_attendance_day(self, class_id, attendance_date):
+    def init_attendance_day(self, class_time_id, attendance_date):
         print("initing attendancd")
-
         dbcursor = self.__conn.cursor(dictionary=True)
+
+        class_id = model.get_class_from_class_time(class_time_id)["class_id"]
         students = self.get_class_students(class_id)
+
+        dbcursor.execute(
+            """
+            INSERT INTO class_sessions (class_time_id, session_date) 
+            VALUES (%s, %s)
+            """,
+            (class_time_id, attendance_date.strftime("%Y-%m-%d")),
+        )
+        session_id = dbcursor.lastrowid
 
         # Get all class fields for the class
         dbcursor.execute(
@@ -449,17 +546,10 @@ class Model:
         }
 
         for student in students:
-            # Get the `student_class_id` for the student and class
-            dbcursor.execute(
-                "SELECT student_class_id FROM student_classes WHERE student_id = %s AND class_id = %s",
-                (student["student_id"], class_id),
-            )
-            student_class_id = dbcursor.fetchone()["student_class_id"]
-
             # Insert attendance record
             dbcursor.execute(
-                "INSERT INTO attendance (student_class_id, attendance_date) VALUES (%s, %s)",
-                (student_class_id, attendance_date.strftime("%Y-%m-%d")),
+                "INSERT INTO attendance (student_id, session_id) VALUES (%s, %s)",
+                (student["student_id"], session_id),
             )
             attendance_id = dbcursor.lastrowid  # Get the inserted attendance_id
 

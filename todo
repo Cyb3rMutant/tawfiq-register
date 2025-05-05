@@ -16,3 +16,7 @@ admins init attendance on demand only
 graphic stats
 
 policies and logins
+
+
+fixing mark attendance:
+  - pass session ids instead of class id or class time id

@@ -1,4 +1,4 @@
-{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
+{% extends "base.html" %} {% block title %}Admin{% endblock %} {% block content
 %}
 <h1>Welcome to the Register App</h1>
 
@@ -8,12 +8,17 @@
     <h2>{{ class.class_name }}</h2>
     <div class="class-links">
       {% for time in class.schedule %}
-      {% if time.session_id %}
-      <a href="/mark_attendance/{{ time.session_id }}" class="btn">Mark Attendance <br />{{ time.day_name }} {{ time.time}}</a>
+      {% if not time.session_id %}
+      <a href="/init_attendance/{{ time.class_time_id }}" class="btn">Mark Attendance <br />{{ time.day_name }} {{ time.time}}</a>
       {% else %}
       <a href="#" class="btn" style="background-color: grey">Mark Attendance <br />{{ time.day_name }} {{ time.time}}</a>
       {% endif %}
       {% endfor %}
+
+      <hr />
+      <a href="/mark_payments/{{ class.class_id }}" class="btn">Mark Payments</a>
+      <a href="/view_attendance/{{ class.class_id }}" class="btn">View Attendance</a>
+      <a href="/view_payments/{{ class.class_id }}" class="btn">View Payments</a>
     </div>
   </div>
   {% endfor %}

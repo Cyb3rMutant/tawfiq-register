@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% block title %}Mark attendance{% endblock %} {%
 block content %}
 <h1>Mark Attendance for the {{ class_data.class_name }} class</h1>
-<form action="/mark_attendance/{{ class_data.class_id }}" method="POST">
+<form action="/mark_attendance/{{ class_data.session_id }}" method="POST">
   {% for data in attendance %}
   <hr />
 
@@ -152,7 +152,7 @@ block content %}
       lastUpdateTime.getSeconds();
     xmlhttp.open(
       "GET",
-      `/ajax_poll?class_id={{ class_data.class_id }}&value=${encodeURIComponent(
+      `/ajax_poll?session_id={{ class_data.session_id }}&value=${encodeURIComponent(
         datetime,
       )}`,
       true,

@@ -41,9 +41,26 @@ CREATE TABLE classes (
     class_id INT AUTO_INCREMENT PRIMARY KEY,
     package_id INT NOT NULL,
     class_name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-    days_of_week CHAR(7) NOT NULL,
-    time_of_day TIME NOT NULL,
     FOREIGN KEY(package_id) REFERENCES packages(package_id)
+);
+
+CREATE TABLE days_of_week (
+  day_id INT AUTO_INCREMENT PRIMARY KEY,
+  day_name ENUM('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday') NOT NULL UNIQUE
+);
+
+INSERT INTO days_of_week (
+  day_name
+) VALUES ('Sunday'), ('Monday'), ('Tuesday'), ('Wednesday'), ('Thursday'), ('Friday'), ('Saturday');
+
+-- Create `classes_times` table
+CREATE TABLE class_times (
+  class_time_id INT AUTO_INCREMENT PRIMARY KEY,
+  class_id INT NOT NULL,
+  day_id INT NOT NULL,
+  time TIME NOT NULL,
+  FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
+  FOREIGN KEY (day_id) REFERENCES days_of_week(day_id) ON DELETE CASCADE
 );
 
 -- Create `teachers` table
@@ -75,12 +92,22 @@ CREATE TABLE student_classes (
     FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE
 );
 
+CREATE TABLE class_sessions (
+    session_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_time_id INT NOT NULL,
+    session_date DATE NOT NULL,
+    FOREIGN KEY (class_time_id) REFERENCES class_times(class_time_id) ON DELETE CASCADE,
+    UNIQUE (class_time_id, session_date) -- prevent duplicates
+);
+
 CREATE TABLE attendance (
     attendance_id INT AUTO_INCREMENT PRIMARY KEY,
-    student_class_id INT NOT NULL,
-    attendance_date DATE NOT NULL,
+    student_id INT NOT NULL,
+    session_id INT NOT NULL,
     status ENUM('Present', 'Absent', 'Late') NOT NULL DEFAULT 'Absent',
-    FOREIGN KEY (student_class_id) REFERENCES student_classes(student_class_id) ON DELETE CASCADE
+    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES class_sessions(session_id) ON DELETE CASCADE,
+    UNIQUE (student_id, session_id) -- prevent duplicate entries
 );
 
 CREATE TABLE field_types (

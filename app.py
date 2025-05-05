@@ -21,6 +21,12 @@ def index():
     return render_template("index.html", classes=classes)
 
 
+@app.route("/admin")
+def admin():
+    classes = model.get_classes_with_time()
+    return render_template("admin.html", classes=classes)
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method != "POST":
@@ -97,15 +103,7 @@ def parse_fields(fields):
 @app.route("/add_class", methods=["GET", "POST"])
 def add_class():
     field_types = model.get_field_types()
-    days_of_week = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ]
+    days_of_week = model.get_days_of_week()
     if request.method != "POST":
         # For GET request: Retrieve available teachers for the form
         teachers = model.get_teachers()
@@ -121,9 +119,10 @@ def add_class():
     class_name = request.form["class_name"]
     teacher_ids = request.form.getlist("teacher_ids")  # Multiple teachers
     package_id = request.form["package_id"]
-    selected_days = request.form.getlist("days_of_week")  # Get list of selected days
-    days_binary = "".join("1" if day in selected_days else "0" for day in days_of_week)
-    time_of_day = request.form["time_of_day"]
+    days_and_times = [
+        (x, request.form[f"time_of_day_{x}"])
+        for x in request.form.getlist("days_of_week")
+    ]
     fields = parse_fields(request.form["fields"])
 
     # Call the function to add a class
@@ -131,8 +130,7 @@ def add_class():
         class_name=class_name,
         teacher_ids=teacher_ids,
         package_id=package_id,
-        days_of_week=days_binary,
-        time_of_day=time_of_day,
+        days_and_times=days_and_times,
         fields=fields,
     )
 
@@ -202,9 +200,8 @@ def ajax_poll():
         )
         if client_last_update_time > server_last_update_time:
             return []
-        attendance_date = datetime.now() + timedelta(days=7 * 0)
-        class_id = request.args.get("class_id")
-        return model.get_attendance(class_id, attendance_date)
+        session_id = request.args.get("session_id")
+        return model.get_attendance(session_id)
 
 
 def decode_days_binary(binary_string):
@@ -238,33 +235,20 @@ def mark_payments(class_id):
     )
 
 
-@app.route("/mark_attendance/<int:class_id>")
-def mark_attendance(class_id):
-    # Get the current date and day of the week
+@app.route("/init_attendance/<int:class_time_id>")
+def init_attendance(class_time_id):
     attendance_date = datetime.now()
-    current_day = attendance_date.strftime("%A")  # Get current day (e.g., "Monday")
-
-    # Fetch the class data from the database using the class_id
-    class_data = model.get_class(class_id)
-    print(
-        f"Attendance Date: {attendance_date}, Current Day: {current_day}, Class Days: {class_data['days_of_week']}"
-    )
-
-    # Decode the binary days string into a list of active days
-    active_days = decode_days_binary(class_data["days_of_week"])
-    print(f"Active Days for Class {class_data['class_name']}: {active_days}")
-
-    # Check if the class is running today
-    if current_day not in active_days:
-        return f"{class_data['class_name']} is not running today."
+    class_id = model.get_class_from_class_time(class_time_id)["class_id"]
     if not model.get_class_payments(class_id, attendance_date):
         model.init_payment_month(class_id, attendance_date)
-    attendance = model.get_attendance(class_id, attendance_date)
-    if not attendance:
-        # mark all students as none attendant
-        model.init_attendance_day(class_id, attendance_date)
-        attendance = model.get_attendance(class_id, attendance_date)
+    model.init_attendance_day(class_time_id, attendance_date)
+    return redirect(url_for("admin"))
 
+
+@app.route("/mark_attendance/<int:session_id>")
+def mark_attendance(session_id):
+    class_data = model.get_class_from_session(session_id)
+    attendance = model.get_attendance(session_id)
     return render_template(
         "mark_attendance.html", attendance=attendance, class_data=class_data
     )
