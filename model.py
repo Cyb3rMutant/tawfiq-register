@@ -7,8 +7,8 @@ class Model:
 
     def __init__(self):
         self.__conn = mysql.connector.connect(
-            host="localhost",
-            # host="db",
+            # host="localhost",
+            host="db",
             user="root",
             password="p",
             database="register",
